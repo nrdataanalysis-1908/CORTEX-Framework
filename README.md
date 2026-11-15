@@ -2,7 +2,7 @@
 
 Desenvolvido por Nadison Roberto | NR TECH | © 2026
 
-Framework de referência para Intelligent Document Processing (IDP), Engenharia de Dados, Inteligência Artificial e automação de processos corporativos.
+Framework de referência para Processamento Inteligente de Documentos (IDP), Engenharia de Dados, Inteligência Artificial e automação de processos corporativos.
 
 > Estado do repositório: material de pesquisa e estruturação. Este README descreve a direção técnica do projeto; não afirma que pipelines, modelos ou integrações estejam implementados ou em produção.
 
@@ -50,7 +50,7 @@ Validação e revisão
 Persistência rastreável
    |
    v
-API / workflow corporativo
+API / fluxo de trabalho corporativo
 ```
 
 Este fluxo é uma referência arquitetural, não uma declaração de implementação atual.
