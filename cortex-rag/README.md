@@ -129,9 +129,27 @@ A execução de avaliação requer PostgreSQL ativo, documento previamente inger
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | /health | Health check |
+| GET | /health | Liveness check |
+| GET | /ready | PostgreSQL readiness check |
+| GET | /metrics | Process-local request and latency metrics (JSON) |
 | POST | /documents | PDF/TXT ingestion |
 | POST | /ask | Contextual question answering |
+
+As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito.
+
+### Observability and reliability baseline
+
+`GET /metrics` apresenta contagem de requisições, erros HTTP 5xx e percentis p50/p95/p99 calculados sobre uma janela em memória de até 10.000 observações. Esses dados são locais ao processo, reiniciam com a aplicação e não devem ser tratados como telemetria distribuída ou SLO de produção. O endpoint ainda não possui autenticação.
+
+Variáveis adicionais:
+
+~~~env
+OPENAI_TIMEOUT_SECONDS=30
+OPENAI_MAX_RETRIES=2
+DATABASE_CONNECT_TIMEOUT_SECONDS=5
+~~~
+
+`/health` verifica liveness da API; `/ready` consulta o PostgreSQL. A prontidão não verifica a disponibilidade da OpenAI.
 
 Exemplo de requisição:
 
@@ -185,8 +203,10 @@ cortex-rag/
 - [x] Dataset sintético de 20 perguntas.
 - [x] Avaliador inicial de recuperação top-K.
 - [ ] Baseline integrado reproduzível.
+- [ ] Testes de integração para concorrência e idempotência.
 - [ ] Avaliação de groundedness e factualidade.
-- [ ] Observabilidade estruturada e controle de acesso.
+- [x] Instrumentação inicial de requisições, latência e logs JSON.
+- [ ] Métricas Prometheus, tracing distribuído e controle de acesso.
 - [ ] OCR e avaliação multimodal.
 
 ---
@@ -197,6 +217,6 @@ cortex-rag/
 
 **NR TECH Research Laboratory** · CORTEX Framework
 
-<sub>Experimental implementation · feat/cortex-rag-mvp</sub>
+<sub>Experimental implementation · engineering foundation in progress</sub>
 
 </div>
