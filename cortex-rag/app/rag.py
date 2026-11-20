@@ -66,14 +66,15 @@ def ingest(filename: str, data: bytes) -> dict:
             (filename, digest),
         ).fetchone()
         document_id = doc[0]
-        conn.executemany(
-            """INSERT INTO rag_chunks (document_id, chunk_index, content, embedding)
-               VALUES (%s, %s, %s, %s)""",
-            [
-                (document_id, i, chunk, vector)
-                for i, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True))
-            ],
-        )
+        with conn.cursor() as cursor:
+            cursor.executemany(
+                """INSERT INTO rag_chunks (document_id, chunk_index, content, embedding)
+                   VALUES (%s, %s, %s, %s)""",
+                [
+                    (document_id, i, chunk, vector)
+                    for i, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True))
+                ],
+            )
     return {"document_id": document_id, "chunks": len(chunks), "status": "ingested"}
 
 
