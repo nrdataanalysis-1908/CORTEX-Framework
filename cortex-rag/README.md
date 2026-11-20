@@ -205,7 +205,9 @@ cortex-rag/
 - [x] Dataset sintético de 20 perguntas.
 - [x] Avaliador inicial de recuperação top-K.
 - [ ] Baseline integrado reproduzível.
-- [x] Testes de contrato para liveness e readiness em falhas de banco.\n- [ ] Testes de integração para concorrência e idempotência.
+- [x] Testes de contrato para liveness e readiness em falhas de banco.\n- [x] Idempotência concorrente por hash com advisory lock transacional no PostgreSQL.
+- [x] Teste de integração concorrente executado contra PostgreSQL/pgvector no CI.
+- [ ] Testes de carga para contenção de locks, throughput e latência p95/p99.
 - [ ] Avaliação mensurável de groundedness e factualidade.
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
 - [ ] Métricas Prometheus, tracing distribuído e controle de acesso.
