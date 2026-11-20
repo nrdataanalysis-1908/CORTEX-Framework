@@ -1,84 +1,71 @@
-# CORTEX Framework
+<div align="center">
 
-Desenvolvido por Nadison Roberto | NR TECH | © 2026
+<img src="cortex-rag/assets/nrtech-mark.svg" alt="NR TECH / NRTechLab" width="520">
 
-Framework de referência para Processamento Inteligente de Documentos (IDP), Engenharia de Dados, Inteligência Artificial e automação de processos corporativos.
+# CORTEX FRAMEWORK
+### Intelligent Document Processing · Data Engineering · Applied AI
 
-> Estado do repositório: material de pesquisa e estruturação. Este README descreve a direção técnica do projeto; não afirma que pipelines, modelos ou integrações estejam implementados ou em produção.
+<img src="cortex-rag/assets/cortex-rag/assets/cortex-rag-architecture.svg" alt="CORTEX RAG architecture" width="100%">
 
-## Objetivo
+**Researching. Building. Automating. Evolving.**
 
-Organizar componentes reutilizáveis para transformar documentos não estruturados em informação validada, rastreável e consumível por sistemas corporativos.
+</div>
 
-## Domínios de trabalho
+---
 
-- **Ingestão documental:** recebimento, identificação do formato e registro de proveniência.
-- **Pré-processamento:** normalização, classificação e preparação do conteúdo.
-- **Extração:** captura de entidades e campos com regras determinísticas ou modelos.
-- **Validação:** tipagem, regras de negócio, consistência e revisão de baixa confiança.
-- **Orquestração:** execução rastreável, retentativas e tratamento de falhas.
-- **Integração:** publicação por API, banco de dados ou filas, conforme o caso de uso.
+## Sobre o projeto
+
+O CORTEX Framework organiza uma arquitetura de referência para processamento inteligente de documentos (IDP), engenharia de dados, inteligência artificial e automação de processos corporativos.
+
+O princípio central é transformar conteúdo não estruturado em informação validada, rastreável e consumível por sistemas corporativos — com separação explícita entre inferência probabilística, regras determinísticas e validação de negócio.
+
+> Estado do repositório: framework em evolução. O módulo CORTEX RAG possui uma implementação MVP em uma branch de desenvolvimento; os demais domínios descritos neste documento representam diretrizes arquiteturais, não funcionalidades declaradas como prontas ou em produção.
+
+## Módulos e domínios
+
+| Domínio | Responsabilidade |
+|---|---|
+| Document Intelligence | Ingestão, extração e classificação documental |
+| Data Engineering | Pipelines, qualidade, linhagem e persistência |
+| AI / RAG | Busca semântica, recuperação de evidências e geração contextual |
+| Automation | Orquestração de tarefas e integração entre sistemas |
+| Governance | Auditoria, segurança, validação e observabilidade |
+
+## Módulo em desenvolvimento: CORTEX RAG
+
+<img src="cortex-rag/assets/cortex-rag-architecture.svg" alt="Arquitetura do módulo CORTEX RAG" width="100%">
+
+O MVP implementa um fluxo documental com FastAPI, PostgreSQL, pgvector e modelos OpenAI. Inclui extração PDF/TXT, chunking, embeddings, recuperação vetorial, respostas com fontes e um conjunto sintético de 20 perguntas para avaliação de recuperação.
+
+- [Acessar o módulo CORTEX RAG](cortex-rag/README.md)
+- [Ver a branch de desenvolvimento](https://github.com/nrdataanalysis-1908/CORTEX-Framework/tree/feat/cortex-rag-mvp)
 
 ## Princípios de engenharia
 
-1. Rastreabilidade entre documento de origem, execução e resultado.
-2. Idempotência para evitar processamento duplicado.
-3. Validação explícita antes de persistir ou distribuir dados.
-4. Separação entre extração probabilística e regras determinísticas.
-5. Observabilidade por etapa, com erros classificados e métricas operacionais.
-6. Segurança por padrão: dados sensíveis minimizados, acesso restrito e segredos fora do código.
-7. Avaliação mensurável de qualidade, latência e custo antes de promover componentes.
+- Rastreabilidade entre documento de origem, execução e resultado.
+- Idempotência e controle de duplicidade.
+- Validação explícita antes de persistir ou distribuir dados.
+- Separação entre extração probabilística e regras determinísticas.
+- Observabilidade por etapa, com erros classificados e métricas operacionais.
+- Segurança por padrão: minimização de dados, acesso restrito e segredos fora do código.
+- Avaliação mensurável de qualidade, latência e custo antes de ampliar o escopo.
 
-## Fluxo lógico de referência
+## Identidade
 
-```text
-Documento
-   |
-   v
-Ingestão e identificação
-   |
-   v
-Pré-processamento
-   |
-   v
-Extração / classificação
-   |
-   v
-Validação e revisão
-   |
-   v
-Persistência rastreável
-   |
-   v
-API / fluxo de trabalho corporativo
-```
+<div align="center">
 
-Este fluxo é uma referência arquitetural, não uma declaração de implementação atual.
+<img src="cortex-rag/assets/nrtech-mark.svg" alt="NR TECH" width="420">
 
-## Critérios mínimos para componentes futuros
+<sub>Deep navy · Neon cyan · Electric blue · Intelligent systems</sub>
 
-| Área | Evidência esperada |
-|---|---|
-| Qualidade | Casos de teste positivos, negativos e documentos incompletos |
-| Confiabilidade | Idempotência, timeout, retry limitado e tratamento de exceções |
-| Auditoria | Identificador de execução, origem e versão do componente |
-| Segurança | Validação de entrada, proteção de dados e gestão externa de segredos |
-| Operação | Logs estruturados, métricas e instruções de execução |
-| Desempenho | Baseline reproduzível de tempo e consumo de recursos |
+</div>
 
-## Evolução sugerida
+---
 
-- [ ] Registrar casos de uso e formatos documentais suportados.
-- [ ] Definir contratos de entrada e saída versionados.
-- [ ] Implementar um pipeline vertical mínimo com fixtures anonimizadas.
-- [ ] Criar testes de regressão para extração e validação.
-- [ ] Documentar execução local, configuração e limitações.
-- [ ] Medir qualidade, latência e custo antes de ampliar o escopo.
+<div align="center">
 
-## Contribuição
+**Desenvolvido por Nadison Roberto | NR TECH / NRTechLab**
 
-Toda contribuição deve incluir contexto, comportamento esperado, validação executável e atualização documental quando alterar contratos ou operação. Não utilizar documentos pessoais ou dados sensíveis reais em fixtures; prefira exemplos sintéticos ou anonimizados.
+*Researching. Building. Automating. Evolving.*
 
-## Licença
-
-Consulte o arquivo de licença do repositório. Na ausência dele, não presuma permissões de redistribuição.
+</div>
