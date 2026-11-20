@@ -5,9 +5,21 @@ from app.config import settings
 
 
 def connect():
-    conn = psycopg.connect(settings.database_url)
+    conn = psycopg.connect(
+        settings.database_url,
+        connect_timeout=settings.database_connect_timeout_seconds,
+    )
     register_vector(conn)
     return conn
+
+
+def check_database() -> bool:
+    try:
+        with connect() as conn:
+            conn.execute("SELECT 1")
+        return True
+    except psycopg.Error:
+        return False
 
 
 def init_db():
