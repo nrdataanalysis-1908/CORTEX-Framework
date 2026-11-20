@@ -1,125 +1,149 @@
 <div align="center">
 
-<img src="assets/nrtech-mark.svg" alt="NR TECH / NRTechLab" width="520">
+<a href="https://www.nrtechlab.dev/"><img src="https://www.nrtechlab.dev/__l5e/assets-v1/02f952d5-a3b8-492b-8494-d58ea08ddfda/nrtech-logo.jpeg" alt="NR TECH Research Laboratory" width="150"></a>
 
 # CORTEX RAG
-### Retrieval-Augmented Generation para conhecimento documental
+### Retrieval-Augmented Generation for Document Intelligence
 
-<img src="assets/cortex-rag-architecture.svg" alt="Arquitetura do CORTEX RAG" width="100%">
+**Technical implementation note · NR TECH Research Laboratory · 2026**
 
-**FastAPI · PostgreSQL · pgvector · OpenAI · Python**
-
-[Visão geral](../README.md) · [Arquitetura](assets/cortex-rag-architecture.svg) · [Avaliação](evaluation/README.md)
+[Research site](https://www.nrtechlab.dev/) · [Framework overview](../README.md) · [Evaluation protocol](evaluation/README.md)
 
 </div>
 
 ---
 
-## Visão executiva
+<p align="center">
+<img src="https://img.shields.io/badge/MODULE-RAG-0B75C9?style=flat-square">
+<img src="https://img.shields.io/badge/API-FastAPI-123B5D?style=flat-square">
+<img src="https://img.shields.io/badge/DATABASE-PostgreSQL%2016-336791?style=flat-square">
+<img src="https://img.shields.io/badge/VECTOR-pgvector-168AAD?style=flat-square">
+<img src="https://img.shields.io/badge/STATUS-Experimental-8A6D3B?style=flat-square">
+</p>
 
-O CORTEX RAG é um MVP de busca semântica e geração de respostas fundamentadas em documentos. O fluxo recebe arquivos PDF/TXT, extrai o conteúdo, segmenta o texto em chunks com sobreposição, gera embeddings, persiste vetores no PostgreSQL/pgvector e recupera evidências para compor o contexto enviado ao modelo de linguagem.
+## 00 / Abstract
 
-<details>
-<summary><strong>Escopo implementado nesta branch</strong></summary>
+Este módulo implementa um pipeline experimental de Retrieval-Augmented Generation (RAG) para consulta a documentos. O objetivo é investigar a recuperação de evidências documentais e sua utilização como contexto de respostas geradas por um modelo de linguagem.
 
-- API FastAPI com health check, ingestão documental e endpoint de perguntas.
-- Extração de texto de PDF digital e TXT UTF-8.
-- Chunking parametrizável e testável isoladamente.
-- Embeddings persistidos no pgvector.
-- Busca por distância de cosseno com índice HNSW.
-- Resposta com indicação dos arquivos recuperados e abstenção heurística quando a similaridade é baixa.
-- Dataset sintético com 20 perguntas e script de avaliação de recuperação.
+O escopo atual contempla arquivos PDF digitais e TXT, segmentação textual, embeddings, armazenamento vetorial e recuperação por distância de cosseno. A implementação é um MVP de engenharia; ainda não constitui uma solução validada para produção.
 
-</details>
+## 01 / System architecture
 
-## Identidade e stack
+<img src="assets/cortex-rag-architecture.svg" alt="CORTEX RAG system architecture" width="100%">
 
-| Camada | Tecnologia |
+| Stage | Operação | Componente |
+|---|---|---|
+| 01 | Document acquisition | FastAPI upload |
+| 02 | Text extraction | pypdf / UTF-8 |
+| 03 | Chunk segmentation | Python |
+| 04 | Vectorization | OpenAI embeddings |
+| 05 | Vector persistence and retrieval | PostgreSQL / pgvector |
+| 06 | Contextual generation | OpenAI chat completion |
+
+## 02 / Technology profile
+
+| Layer | Technology |
 |---|---|
-| API | FastAPI + Pydantic |
-| Linguagem | Python |
-| Persistência | PostgreSQL 16 |
-| Busca vetorial | pgvector + HNSW |
-| Embeddings | OpenAI `text-embedding-3-small` |
-| Geração | OpenAI `gpt-4o-mini` |
-| Extração PDF | pypdf |
-| Ambiente local | Docker Compose |
-| Testes | pytest |
+| Language | Python |
+| API | FastAPI |
+| Database | PostgreSQL 16 |
+| Vector extension | pgvector |
+| Similarity | Cosine distance |
+| ANN index | HNSW |
+| Embedding model | text-embedding-3-small |
+| Generation model | gpt-4o-mini |
+| PDF parser | pypdf |
+| Tests | pytest |
+| Local environment | Docker Compose |
 
-## Fluxo de avaliação
+## 03 / Evaluation protocol
 
-<img src="assets/evaluation-loop.svg" alt="Ciclo de avaliação do CORTEX RAG" width="100%">
+<img src="assets/evaluation-loop.svg" alt="Retrieval evaluation protocol" width="100%">
 
-A métrica atualmente implementada é `evidence_hit_rate_at_k`: proporção de perguntas em que a evidência-ouro foi encontrada entre os primeiros K trechos recuperados. Ela avalia recuperação, não correção factual da resposta gerada. Groundedness, factualidade, latência e custo permanecem dimensões de avaliação futura/manual.
+O diretório evaluation contém um documento sintético e 20 perguntas com evidência-ouro. A métrica evidence_hit_rate_at_k calcula a proporção de perguntas em que o trecho de referência foi recuperado entre os primeiros K resultados.
 
-## Execução local
+~~~text
+evidence_hit_rate_at_k = evidence_hits / total_questions
+~~~
 
-### 1. Preparar ambiente
+A métrica não deve ser interpretada como acurácia da resposta, factualidade, groundedness ou ausência de alucinação. Essas dimensões exigem protocolo próprio e revisão qualitativa.
 
-Na pasta `cortex-rag`:
+Consulte [evaluation/README.md](evaluation/README.md) para os detalhes e critérios de execução.
 
-```powershell
+## 04 / Local execution
+
+### Requirements
+
+- Python 3.11+
+- Docker Desktop
+- Chave de API OpenAI
+
+### Environment setup — Windows PowerShell
+
+~~~powershell
+cd cortex-rag
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env
-```
+~~~
 
-Edite `.env` e informe a chave da API OpenAI. Não versionar esse arquivo.
+Configure as variáveis em .env. Não versione chaves ou segredos.
 
-### 2. Subir o PostgreSQL
+### Database
 
-```powershell
+~~~powershell
 docker compose up -d
-```
+~~~
 
-### 3. Iniciar a API
+### API
 
-```powershell
+~~~powershell
 uvicorn app.main:app --reload
-```
+~~~
 
-Documentação interativa: http://127.0.0.1:8000/docs
+Swagger UI: http://127.0.0.1:8000/docs
 
-### 4. Executar testes unitários
+### Unit tests
 
-```powershell
+~~~powershell
 python -m pytest tests -q
-```
+~~~
 
-Os testes de chunking e integridade do dataset não exigem conexão com banco ou chamadas à OpenAI.
+Os testes unitários de chunking e integridade do dataset não exigem conexão com banco ou chamadas à API OpenAI.
 
-### 5. Ingerir o documento sintético de avaliação
+### Retrieval evaluation
 
-Com a API ativa, envie o arquivo `evaluation/fixtures/manual_operacional_sintetico.txt` pelo endpoint `POST /documents` (Swagger em `/docs`). O documento é fictício e foi criado exclusivamente para os testes.
+1. Faça upload de evaluation/fixtures/manual_operacional_sintetico.txt via POST /documents.
+2. Execute:
 
-### 6. Executar avaliação de recuperação
-
-```powershell
+~~~powershell
 python -m evaluation.run_eval --k 5
-```
+~~~
 
-O relatório JSON será salvo em `evaluation/results/latest.json`. A execução exige banco ativo, documento previamente ingerido e chave OpenAI configurada.
+3. Analise o relatório em evaluation/results/latest.json.
 
-## Endpoints
+A execução de avaliação requer PostgreSQL ativo, documento previamente ingerido e credenciais válidas.
 
-| Método | Rota | Finalidade |
+## 05 / API surface
+
+| Method | Endpoint | Description |
 |---|---|---|
-| GET | `/health` | Verificação básica do serviço |
-| POST | `/documents` | Upload de PDF ou TXT |
-| POST | `/ask` | Pergunta sobre o acervo indexado |
+| GET | /health | Health check |
+| POST | /documents | PDF/TXT ingestion |
+| POST | /ask | Contextual question answering |
 
-Exemplo de payload para `POST /ask`:
+Exemplo de requisição:
 
-```json
+~~~json
 {
   "question": "Qual é o prazo-alvo de primeira resposta para P1?"
 }
-```
+~~~
 
-## Estrutura
+## 06 / Repository map
 
-```text
+~~~text
 cortex-rag/
 ├── app/
 │   ├── chunking.py
@@ -128,49 +152,51 @@ cortex-rag/
 │   ├── main.py
 │   └── rag.py
 ├── assets/
-│   ├── nrtech-mark.svg
 │   ├── cortex-rag-architecture.svg
 │   └── evaluation-loop.svg
 ├── evaluation/
 │   ├── fixtures/
 │   ├── questions.json
-│   └── run_eval.py
+│   ├── run_eval.py
+│   └── README.md
 ├── tests/
-│   └── test_chunking.py
+│   ├── test_chunking.py
+│   └── test_evaluation_dataset.py
 ├── .env.example
 ├── docker-compose.yml
 └── requirements.txt
-```
+~~~
 
-## Limitações e segurança
+## 07 / Limitations and controls
 
-- PDFs escaneados exigem OCR, ainda não incluído.
-- Não há autenticação, autorização ou isolamento multi-tenant.
+- PDFs escaneados não são processados; OCR não está incluído.
+- Não há autenticação, autorização ou isolamento entre usuários.
 - O limite de upload é de 15 MB.
-- A estratégia de chunking usa janelas de caracteres; não é segmentação semântica.
-- O limiar de similaridade de 0,25 é heurístico e ainda precisa de calibração.
-- A avaliação atual não comprova factualidade, ausência de alucinação ou qualidade global das respostas.
-- Não utilizar documentos pessoais, confidenciais ou dados de produção neste MVP.
-- Segredos devem permanecer em variáveis de ambiente e fora do Git.
+- Chunking utiliza janelas de caracteres, não segmentação semântica.
+- O limiar de similaridade é heurístico e requer calibração.
+- A avaliação atual não mede factualidade nem qualidade global das respostas.
+- O corpus de teste é sintético; não utilizar documentos pessoais ou confidenciais.
+- Segredos devem permanecer em variáveis de ambiente e nunca ser versionados.
 
-## Roadmap técnico
+## 08 / Engineering roadmap
 
-- [x] Pipeline inicial de ingestão e recuperação vetorial.
+- [x] Ingestão PDF/TXT e persistência vetorial inicial.
 - [x] Chunking isolado e testes unitários.
-- [x] Conjunto sintético de 20 perguntas.
-- [x] Métrica inicial de recuperação top-K.
-- [ ] Executar avaliação com banco e registrar baseline real.
-- [ ] Adicionar avaliação de groundedness/factualidade com revisão humana.
-- [ ] Adicionar logs estruturados, autenticação e controles de acesso.
-- [ ] Avaliar OCR e chunking semântico.
+- [x] Dataset sintético de 20 perguntas.
+- [x] Avaliador inicial de recuperação top-K.
+- [ ] Baseline integrado reproduzível.
+- [ ] Avaliação de groundedness e factualidade.
+- [ ] Observabilidade estruturada e controle de acesso.
+- [ ] OCR e avaliação multimodal.
 
 ---
 
 <div align="center">
 
-**NR TECH / NRTechLab**  
-*Researching. Building. Automating. Evolving.*
+<a href="https://www.nrtechlab.dev/"><img src="https://www.nrtechlab.dev/__l5e/assets-v1/02f952d5-a3b8-492b-8494-d58ea08ddfda/nrtech-logo.jpeg" alt="NR TECH Research Laboratory" width="92"></a>
 
-<sub>Projeto experimental • branch feat/cortex-rag-mvp • versão 0.1.0</sub>
+**NR TECH Research Laboratory** · CORTEX Framework
+
+<sub>Experimental implementation · feat/cortex-rag-mvp</sub>
 
 </div>
