@@ -14,10 +14,15 @@ def connect():
 
 
 def check_database() -> bool:
+    """Return True only when PostgreSQL is reachable and the RAG schema exists."""
     try:
         with connect() as conn:
-            conn.execute("SELECT 1")
-        return True
+            row = conn.execute(
+                """SELECT
+                       to_regclass('public.rag_documents') IS NOT NULL
+                       AND to_regclass('public.rag_chunks') IS NOT NULL"""
+            ).fetchone()
+        return bool(row and row[0])
     except psycopg.Error:
         return False
 
