@@ -5,7 +5,7 @@
 # CORTEX FRAMEWORK
 ### Intelligent Document Processing · Data Engineering · Applied AI
 
-<img src="cortex-rag/assets/cortex-rag/assets/cortex-rag-architecture.svg" alt="CORTEX RAG architecture" width="100%">
+<img src="cortex-rag/assets/cortex-rag-architecture.svg" alt="CORTEX RAG architecture" width="100%">
 
 **Researching. Building. Automating. Evolving.**
 
