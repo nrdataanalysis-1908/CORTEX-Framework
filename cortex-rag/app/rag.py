@@ -40,14 +40,23 @@ def ingest(filename: str, data: bytes) -> dict:
         existing = conn.execute(
             "SELECT id FROM rag_documents WHERE content_sha256 = %s", (digest,)
         ).fetchone()
-        if existing:
-            return {"document_id": existing[0], "chunks": 0, "status": "already_exists"}
+    if existing:
+        return {"document_id": existing[0], "chunks": 0, "status": "already_exists"}
 
-        vectors = embed(chunks)
+    vectors = embed(chunks)
+    with connect() as conn:
         doc = conn.execute(
-            "INSERT INTO rag_documents (filename, content_sha256) VALUES (%s, %s) RETURNING id",
+            """INSERT INTO rag_documents (filename, content_sha256)
+               VALUES (%s, %s)
+               ON CONFLICT (content_sha256) DO NOTHING
+               RETURNING id""",
             (filename, digest),
         ).fetchone()
+        if doc is None:
+            existing = conn.execute(
+                "SELECT id FROM rag_documents WHERE content_sha256 = %s", (digest,)
+            ).fetchone()
+            return {"document_id": existing[0], "chunks": 0, "status": "already_exists"}
         document_id = doc[0]
         conn.executemany(
             """INSERT INTO rag_chunks (document_id, chunk_index, content, embedding)
