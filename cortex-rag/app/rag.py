@@ -90,7 +90,8 @@ def answer_question(question: str) -> dict:
         return {
             "answer": "Não encontrei evidências suficientes nos documentos disponíveis.",
             "sources": [],
-            "grounded": False,
+            "evidence_retrieved": False,
+            "groundedness": "not_evaluated",
         }
 
     context = "\n\n".join(
@@ -121,5 +122,6 @@ def answer_question(question: str) -> dict:
             {"filename": row[0], "similarity": round(float(row[2]), 4)}
             for row in rows
         ],
-        "grounded": True,
+        "evidence_retrieved": True,
+        "groundedness": "not_evaluated",
     }
