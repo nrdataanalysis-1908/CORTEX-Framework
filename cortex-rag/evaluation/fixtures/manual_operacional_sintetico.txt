@@ -1,0 +1,66 @@
+MANUAL OPERACIONAL SINTÉTICO — CENTRAL DE SERVIÇOS NR
+Documento fictício para avaliação técnica do CORTEX RAG. Não representa política real de empresa.
+
+1. Atendimento e prioridade
+A Central de Serviços funciona de segunda a sexta-feira, das 08h00 às 18h00, exceto feriados nacionais.
+Incidentes que interrompem integralmente um serviço crítico recebem prioridade P1.
+Incidentes com impacto relevante, mas com alternativa operacional disponível, recebem prioridade P2.
+Solicitações sem interrupção de serviço e sem risco operacional imediato recebem prioridade P3.
+O prazo-alvo de primeira resposta para P1 é de 15 minutos.
+O prazo-alvo de primeira resposta para P2 é de 2 horas úteis.
+O prazo-alvo de primeira resposta para P3 é de 8 horas úteis.
+
+2. Gestão de incidentes
+Todo incidente deve possuir identificador único, solicitante, serviço afetado, horário de abertura, prioridade e descrição objetiva.
+A equipe deve registrar cada mudança de status com data, hora, responsável e justificativa.
+Um incidente P1 deve ser escalonado imediatamente para o coordenador de operações.
+A comunicação de atualização para incidentes P1 deve ocorrer a cada 30 minutos enquanto o serviço permanecer indisponível.
+O encerramento exige registro da causa identificada, ação corretiva aplicada e validação do solicitante ou responsável pelo serviço.
+
+3. Acesso e segurança
+A concessão de acesso exige aprovação formal do gestor responsável pelo sistema.
+A autenticação multifator é obrigatória para contas administrativas e acessos remotos.
+Contas individuais são obrigatórias; o compartilhamento de credenciais é proibido.
+A revisão de permissões deve ocorrer a cada 90 dias.
+A remoção de acesso de um colaborador desligado deve ser solicitada imediatamente e concluída em até 4 horas após a confirmação do desligamento.
+Segredos e tokens de integração devem ser armazenados em cofre de segredos, nunca em código-fonte ou arquivos versionados.
+
+4. Backup e continuidade
+O backup incremental dos bancos operacionais ocorre diariamente às 22h00.
+O backup completo ocorre todo domingo às 02h00.
+A retenção dos backups diários é de 30 dias.
+A retenção dos backups completos semanais é de 12 semanas.
+O objetivo de ponto de recuperação (RPO) para o banco operacional é de 24 horas.
+O objetivo de tempo de recuperação (RTO) para o banco operacional é de 4 horas.
+Um teste de restauração deve ser executado trimestralmente, com evidência registrada em relatório.
+
+5. Mudanças e implantação
+Toda mudança em ambiente produtivo exige registro de mudança, análise de risco, plano de retorno e aprovação do responsável técnico.
+Mudanças de alto risco também exigem aprovação do gestor do serviço.
+Implantações devem ocorrer preferencialmente na janela de terça-feira ou quinta-feira, entre 20h00 e 22h00.
+O plano de retorno deve indicar condição objetiva de rollback, responsável e procedimento de restauração da versão anterior.
+Após a implantação, a equipe deve executar smoke tests e registrar o resultado.
+Mudanças emergenciais podem seguir fluxo abreviado, mas devem ser documentadas e revisadas em até 1 dia útil.
+
+6. Dados e qualidade
+Cada carga de dados deve registrar identificador da execução, origem, horário de início, horário de término, quantidade de registros lidos, quantidade de registros rejeitados e status final.
+A chave de negócio deve ser validada antes da persistência para impedir duplicidades.
+Registros rejeitados devem ser encaminhados para uma área de quarentena com motivo da rejeição.
+A reconciliação deve comparar totais de origem e destino; divergências precisam ser registradas e investigadas.
+O indicador de completude corresponde à proporção de campos obrigatórios preenchidos.
+O indicador de unicidade corresponde à proporção de chaves de negócio sem duplicidade.
+O indicador de validade corresponde à proporção de registros que respeitam regras de domínio e formato.
+
+7. Privacidade e retenção
+Dados pessoais devem ser tratados com finalidade definida e acesso restrito.
+Exportações com dados pessoais exigem autorização do responsável pelo conjunto de dados.
+Arquivos temporários com dados pessoais devem ser eliminados em até 24 horas após o processamento.
+Incidentes envolvendo possível exposição de dados devem ser comunicados ao encarregado de privacidade imediatamente.
+Logs operacionais devem evitar registrar senhas, tokens, conteúdo integral de documentos pessoais ou outros segredos.
+
+8. Indicadores operacionais
+A disponibilidade mensal do serviço é calculada dividindo o tempo disponível pelo tempo total previsto de operação e multiplicando o resultado por 100.
+O MTTR representa o tempo médio entre a abertura do incidente e a restauração do serviço.
+O MTTA representa o tempo médio entre a abertura do incidente e o primeiro reconhecimento pela equipe.
+A taxa de reabertura corresponde ao número de incidentes reabertos dividido pelo total de incidentes encerrados no período.
+O relatório operacional deve apresentar período analisado, fonte dos dados, critérios de cálculo e limitações conhecidas.
