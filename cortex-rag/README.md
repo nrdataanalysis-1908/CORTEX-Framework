@@ -206,7 +206,7 @@ cortex-rag/
 - [x] Avaliador inicial de recuperação top-K.
 - [ ] Baseline integrado reproduzível.
 - [x] Testes de contrato para liveness e readiness em falhas de banco.\n- [x] Idempotência concorrente por hash com advisory lock transacional no PostgreSQL.
-- [x] Teste de integração concorrente executado contra PostgreSQL/pgvector no CI.
+- [ ] Teste de integração concorrente contra PostgreSQL/pgvector no CI (validação pendente).
 - [ ] Testes de carga para contenção de locks, throughput e latência p95/p99.
 - [ ] Avaliação mensurável de groundedness e factualidade.
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
