@@ -49,7 +49,7 @@ def test_concurrent_ingestion_of_same_content_creates_one_document_and_one_embed
         ).fetchone()[0]
 
     assert document_count == 1
-    assert chunk_count == results[0]["chunks"] or chunk_count == 1
+    assert chunk_count == 1
 
     with connect() as conn:
         conn.execute("TRUNCATE TABLE rag_chunks, rag_documents RESTART IDENTITY CASCADE")
