@@ -33,7 +33,7 @@ def health():
 @app.post("/documents", status_code=201)
 async def upload_document(file: UploadFile = File(...)):
     try:
-        data = await file.read()
+        data = await file.read(15 * 1024 * 1024 + 1)
         if len(data) > 15 * 1024 * 1024:
             raise HTTPException(status_code=413, detail="Arquivo excede o limite de 15 MB.")
         return ingest(file.filename or "documento", data)
