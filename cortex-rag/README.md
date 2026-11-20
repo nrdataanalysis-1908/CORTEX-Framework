@@ -110,7 +110,7 @@ Swagger UI: http://127.0.0.1:8000/docs
 python -m pytest tests -q
 ~~~
 
-Os testes unitários de chunking e integridade do dataset não exigem conexão com banco ou chamadas à API OpenAI.
+Os testes unitários de chunking, integridade do dataset e métricas de observabilidade não exigem conexão com banco ou chamadas à API OpenAI.
 
 ### Retrieval evaluation
 
@@ -168,6 +168,7 @@ cortex-rag/
 │   ├── config.py
 │   ├── db.py
 │   ├── main.py
+│   ├── observability.py
 │   └── rag.py
 ├── assets/
 │   ├── cortex-rag-architecture.svg
@@ -179,7 +180,8 @@ cortex-rag/
 │   └── README.md
 ├── tests/
 │   ├── test_chunking.py
-│   └── test_evaluation_dataset.py
+│   ├── test_evaluation_dataset.py
+│   └── test_observability.py
 ├── .env.example
 ├── docker-compose.yml
 └── requirements.txt
