@@ -4,6 +4,7 @@ import uuid
 from contextlib import asynccontextmanager
 from time import perf_counter
 
+import psycopg
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -11,6 +12,9 @@ from pydantic import BaseModel, Field
 from app.db import check_database, init_db
 from app.observability import metrics_snapshot, record_request
 from app.rag import answer_question, ingest
+
+logger = logging.getLogger("cortex.startup")
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -33,14 +37,18 @@ logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    init_db()
+    try:
+        init_db()
+    except psycopg.Error:
+        # Keep the process alive so liveness remains observable during DB outages.
+        logger.exception("database_initialization_failed")
     yield
 
 
 app = FastAPI(
     title="CORTEX RAG API",
     description="RAG documental com FastAPI, PostgreSQL e pgvector.",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
@@ -78,7 +86,7 @@ def health():
 @app.get("/ready")
 def readiness():
     if not check_database():
-        raise HTTPException(status_code=503, detail="Banco de dados indisponível.")
+        raise HTTPException(status_code=503, detail="Banco de dados indisponível ou esquema não inicializado.")
     return {"status": "ready", "database": "available"}
 
 
