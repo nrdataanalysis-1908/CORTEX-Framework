@@ -1,0 +1,182 @@
+[
+  {
+    "id": "Q01",
+    "question": "Em quais dias e horários a Central de Serviços funciona?",
+    "expected_evidence": "de segunda a sexta-feira, das 08h00 às 18h00",
+    "expected_facts": [
+      "segunda a sexta-feira",
+      "08h00 às 18h00"
+    ]
+  },
+  {
+    "id": "Q02",
+    "question": "Qual situação caracteriza um incidente de prioridade P1?",
+    "expected_evidence": "interrompem integralmente um serviço crítico",
+    "expected_facts": [
+      "interrupção integral",
+      "serviço crítico"
+    ]
+  },
+  {
+    "id": "Q03",
+    "question": "Qual é o prazo-alvo de primeira resposta para P1?",
+    "expected_evidence": "para P1 é de 15 minutos",
+    "expected_facts": [
+      "15 minutos"
+    ]
+  },
+  {
+    "id": "Q04",
+    "question": "Qual é o prazo de primeira resposta para P2?",
+    "expected_evidence": "para P2 é de 2 horas úteis",
+    "expected_facts": [
+      "2 horas úteis"
+    ]
+  },
+  {
+    "id": "Q05",
+    "question": "Quais dados mínimos devem constar no registro de incidente?",
+    "expected_evidence": "identificador único, solicitante, serviço afetado",
+    "expected_facts": [
+      "identificador único",
+      "solicitante",
+      "serviço afetado"
+    ]
+  },
+  {
+    "id": "Q06",
+    "question": "Quem deve receber o escalonamento imediato de um incidente P1?",
+    "expected_evidence": "coordenador de operações",
+    "expected_facts": [
+      "coordenador de operações"
+    ]
+  },
+  {
+    "id": "Q07",
+    "question": "Com que frequência deve haver atualização de um incidente P1 indisponível?",
+    "expected_evidence": "a cada 30 minutos",
+    "expected_facts": [
+      "30 minutos"
+    ]
+  },
+  {
+    "id": "Q08",
+    "question": "Qual aprovação é necessária para conceder acesso a um sistema?",
+    "expected_evidence": "aprovação formal do gestor responsável pelo sistema",
+    "expected_facts": [
+      "aprovação formal",
+      "gestor responsável"
+    ]
+  },
+  {
+    "id": "Q09",
+    "question": "Em quais contas a autenticação multifator é obrigatória?",
+    "expected_evidence": "contas administrativas e acessos remotos",
+    "expected_facts": [
+      "contas administrativas",
+      "acessos remotos"
+    ]
+  },
+  {
+    "id": "Q10",
+    "question": "A cada quanto tempo as permissões devem ser revisadas?",
+    "expected_evidence": "a cada 90 dias",
+    "expected_facts": [
+      "90 dias"
+    ]
+  },
+  {
+    "id": "Q11",
+    "question": "Em quanto tempo o acesso de colaborador desligado deve ser removido após confirmação?",
+    "expected_evidence": "em até 4 horas",
+    "expected_facts": [
+      "4 horas"
+    ]
+  },
+  {
+    "id": "Q12",
+    "question": "Quando ocorre o backup incremental dos bancos operacionais?",
+    "expected_evidence": "diariamente às 22h00",
+    "expected_facts": [
+      "diariamente",
+      "22h00"
+    ]
+  },
+  {
+    "id": "Q13",
+    "question": "Qual é a retenção dos backups completos semanais?",
+    "expected_evidence": "12 semanas",
+    "expected_facts": [
+      "12 semanas"
+    ]
+  },
+  {
+    "id": "Q14",
+    "question": "Quais são os objetivos de RPO e RTO do banco operacional?",
+    "expected_evidence": "RPO) para o banco operacional é de 24 horas",
+    "expected_facts": [
+      "RPO",
+      "24 horas",
+      "RTO",
+      "4 horas"
+    ]
+  },
+  {
+    "id": "Q15",
+    "question": "Quais elementos são exigidos para uma mudança em produção?",
+    "expected_evidence": "análise de risco, plano de retorno e aprovação do responsável técnico",
+    "expected_facts": [
+      "análise de risco",
+      "plano de retorno",
+      "aprovação do responsável técnico"
+    ]
+  },
+  {
+    "id": "Q16",
+    "question": "Em quais dias e horários as implantações são preferencialmente realizadas?",
+    "expected_evidence": "terça-feira ou quinta-feira, entre 20h00 e 22h00",
+    "expected_facts": [
+      "terça-feira",
+      "quinta-feira",
+      "20h00 e 22h00"
+    ]
+  },
+  {
+    "id": "Q17",
+    "question": "Quais informações cada carga de dados deve registrar?",
+    "expected_evidence": "identificador da execução, origem, horário de início",
+    "expected_facts": [
+      "identificador da execução",
+      "origem",
+      "registros rejeitados",
+      "status final"
+    ]
+  },
+  {
+    "id": "Q18",
+    "question": "Como os registros rejeitados devem ser tratados?",
+    "expected_evidence": "área de quarentena com motivo da rejeição",
+    "expected_facts": [
+      "área de quarentena",
+      "motivo da rejeição"
+    ]
+  },
+  {
+    "id": "Q19",
+    "question": "Qual é o prazo para eliminar arquivos temporários com dados pessoais?",
+    "expected_evidence": "em até 24 horas após o processamento",
+    "expected_facts": [
+      "24 horas após o processamento"
+    ]
+  },
+  {
+    "id": "Q20",
+    "question": "Como é calculada a disponibilidade mensal do serviço?",
+    "expected_evidence": "tempo disponível pelo tempo total previsto de operação",
+    "expected_facts": [
+      "tempo disponível",
+      "tempo total previsto",
+      "multiplicando o resultado por 100"
+    ]
+  }
+]
