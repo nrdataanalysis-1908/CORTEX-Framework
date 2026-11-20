@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="330" viewBox="0 0 1000 330" role="img" aria-labelledby="t d">
+<title id="t">CORTEX RAG evaluation loop</title><desc id="d">Twenty golden questions, retrieval top-k, evidence hit rate, inspection of misses, and iteration.</desc>
+<rect width="1000" height="330" rx="22" fill="#07111F" stroke="#1A3A59"/>
+<text x="48" y="52" fill="#EAF7FF" font-family="Arial" font-size="25" font-weight="700">CICLO DE AVALIAÇÃO REPRODUZÍVEL</text>
+<g font-family="Arial" text-anchor="middle">
+<g><rect x="50" y="105" width="180" height="112" rx="14" fill="#0D2740" stroke="#60E6FF"/><text x="140" y="145" fill="#60E6FF" font-size="18" font-weight="700">20 CASOS</text><text x="140" y="174" fill="#D8EAF7" font-size="13">perguntas + evidência-ouro</text></g>
+<g><rect x="290" y="105" width="180" height="112" rx="14" fill="#0D2740" stroke="#60E6FF"/><text x="380" y="145" fill="#60E6FF" font-size="18" font-weight="700">RETRIEVAL</text><text x="380" y="174" fill="#D8EAF7" font-size="13">busca top-k</text></g>
+<g><rect x="530" y="105" width="180" height="112" rx="14" fill="#102B35" stroke="#27D7B7"/><text x="620" y="145" fill="#27D7B7" font-size="18" font-weight="700">HIT RATE@K</text><text x="620" y="174" fill="#D8EAF7" font-size="13">evidência recuperada</text></g>
+<g><rect x="770" y="105" width="180" height="112" rx="14" fill="#102B35" stroke="#27D7B7"/><text x="860" y="145" fill="#27D7B7" font-size="18" font-weight="700">ANÁLISE</text><text x="860" y="174" fill="#D8EAF7" font-size="13">erros e ajustes</text></g>
+</g>
+<g stroke="#60E6FF" stroke-width="2.5" fill="none"><path d="M230 161h55"/><path d="M470 161h55"/><path d="M710 161h55"/></g>
+<path d="M860 235v42H140v-42" fill="none" stroke="#27D7B7" stroke-width="2" stroke-dasharray="7 7"/>
+<text x="500" y="305" fill="#8FAFC8" font-family="Arial" font-size="13" text-anchor="middle">Métrica de recuperação não equivale a correção factual da resposta gerada.</text>
+</svg>
