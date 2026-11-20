@@ -1,0 +1,43 @@
+name: CORTEX RAG CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "cortex-rag/**"
+      - ".github/workflows/cortex-rag-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "cortex-rag/**"
+      - ".github/workflows/cortex-rag-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Python unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cortex-rag
+    env:
+      PYTHONPATH: ${{ github.workspace }}/cortex-rag
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: cortex-rag/requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Run unit tests
+        run: python -m pytest -q
