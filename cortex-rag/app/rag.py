@@ -4,6 +4,7 @@ from io import BytesIO
 from openai import OpenAI
 from pypdf import PdfReader
 
+from app.chunking import split_text
 from app.config import settings
 from app.db import connect
 
@@ -19,20 +20,6 @@ def extract_text(filename: str, data: bytes) -> str:
     raise ValueError("Formato não suportado. Envie PDF ou TXT.")
 
 
-def split_text(text: str) -> list[str]:
-    clean = " ".join(text.split())
-    if not clean:
-        return []
-    chunks, start = [], 0
-    while start < len(clean):
-        end = min(start + settings.chunk_size, len(clean))
-        chunks.append(clean[start:end])
-        if end == len(clean):
-            break
-        start = max(0, end - settings.chunk_overlap)
-    return chunks
-
-
 def embed(texts: list[str]) -> list[list[float]]:
     response = client.embeddings.create(
         model=settings.embedding_model,
@@ -44,13 +31,11 @@ def embed(texts: list[str]) -> list[list[float]]:
 
 def ingest(filename: str, data: bytes) -> dict:
     text = extract_text(filename, data)
-    chunks = split_text(text)
+    chunks = split_text(text, settings.chunk_size, settings.chunk_overlap)
     if not chunks:
         raise ValueError("Nenhum texto extraível foi encontrado no arquivo.")
 
     digest = hashlib.sha256(data).hexdigest()
-    vectors = embed(chunks)
-
     with connect() as conn:
         existing = conn.execute(
             "SELECT id FROM rag_documents WHERE content_sha256 = %s", (digest,)
@@ -58,6 +43,7 @@ def ingest(filename: str, data: bytes) -> dict:
         if existing:
             return {"document_id": existing[0], "chunks": 0, "status": "already_exists"}
 
+        vectors = embed(chunks)
         doc = conn.execute(
             "INSERT INTO rag_documents (filename, content_sha256) VALUES (%s, %s) RETURNING id",
             (filename, digest),
@@ -66,7 +52,10 @@ def ingest(filename: str, data: bytes) -> dict:
         conn.executemany(
             """INSERT INTO rag_chunks (document_id, chunk_index, content, embedding)
                VALUES (%s, %s, %s, %s)""",
-            [(document_id, i, chunk, vector) for i, (chunk, vector) in enumerate(zip(chunks, vectors))],
+            [
+                (document_id, i, chunk, vector)
+                for i, (chunk, vector) in enumerate(zip(chunks, vectors))
+            ],
         )
     return {"document_id": document_id, "chunks": len(chunks), "status": "ingested"}
 
@@ -85,8 +74,11 @@ def answer_question(question: str) -> dict:
         ).fetchall()
 
     if not rows or rows[0][2] < 0.25:
-        return {"answer": "Não encontrei evidências suficientes nos documentos disponíveis.",
-                "sources": [], "grounded": False}
+        return {
+            "answer": "Não encontrei evidências suficientes nos documentos disponíveis.",
+            "sources": [],
+            "grounded": False,
+        }
 
     context = "\n\n".join(
         f"[Fonte: {filename} | similaridade: {score:.3f}]\n{content}"
@@ -96,15 +88,25 @@ def answer_question(question: str) -> dict:
         model=settings.chat_model,
         temperature=0,
         messages=[
-            {"role": "system", "content":
-             "Responda em português usando somente o contexto fornecido. "
-             "Se o contexto não sustentar a resposta, declare que não há evidência suficiente. "
-             "Não invente fatos. Cite os nomes dos arquivos usados."},
-            {"role": "user", "content": f"CONTEXTO:\n{context}\n\nPERGUNTA:\n{question}"},
+            {
+                "role": "system",
+                "content": (
+                    "Responda em português usando somente o contexto fornecido. "
+                    "Se o contexto não sustentar a resposta, declare que não há evidência suficiente. "
+                    "Não invente fatos. Cite os nomes dos arquivos usados."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"CONTEXTO:\n{context}\n\nPERGUNTA:\n{question}",
+            },
         ],
     )
     return {
         "answer": completion.choices[0].message.content or "",
-        "sources": [{"filename": r[0], "similarity": round(float(r[2]), 4)} for r in rows],
+        "sources": [
+            {"filename": row[0], "similarity": round(float(row[2]), 4)}
+            for row in rows
+        ],
         "grounded": True,
     }
