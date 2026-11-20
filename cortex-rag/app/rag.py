@@ -8,7 +8,11 @@ from app.chunking import split_text
 from app.config import settings
 from app.db import connect
 
-client = OpenAI(api_key=settings.openai_api_key)
+client = OpenAI(
+    api_key=settings.openai_api_key,
+    timeout=settings.openai_timeout_seconds,
+    max_retries=settings.openai_max_retries,
+)
 
 
 def extract_text(filename: str, data: bytes) -> str:
