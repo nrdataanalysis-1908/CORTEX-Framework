@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +11,9 @@ class Settings(BaseSettings):
     chunk_size: int = 1200
     chunk_overlap: int = 200
     top_k: int = 5
+    openai_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+    openai_max_retries: int = Field(default=2, ge=0, le=5)
+    database_connect_timeout_seconds: int = Field(default=5, ge=1, le=60)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
