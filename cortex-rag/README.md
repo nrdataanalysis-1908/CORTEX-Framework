@@ -139,7 +139,7 @@ As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requi
 
 ### Observability and reliability baseline
 
-`GET /metrics` apresenta contagem de requisições, erros HTTP 5xx e percentis p50/p95/p99 calculados sobre uma janela em memória de até 10.000 observações. Esses dados são locais ao processo, reiniciam com a aplicação e não devem ser tratados como telemetria distribuída ou SLO de produção. O endpoint ainda não possui autenticação.
+`GET /metrics` apresenta contagem de requisições, erros HTTP 5xx e percentis p50/p95/p99 calculados sobre uma janela em memória de até 10.000 observações. Esses dados são locais ao processo, reiniciam com a aplicação e não devem ser tratados como telemetria distribuída ou SLO de produção. O endpoint ainda não possui autenticação e deve permanecer restrito à rede confiável até que o controle de acesso seja implementado.
 
 Variáveis adicionais:
 
@@ -149,7 +149,7 @@ OPENAI_MAX_RETRIES=2
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
 ~~~
 
-`/health` verifica liveness da API; `/ready` consulta o PostgreSQL. A prontidão não verifica a disponibilidade da OpenAI.
+`/health` verifica exclusivamente a liveness da API e permanece disponível mesmo quando a inicialização do banco falha. `/ready` verifica a conectividade PostgreSQL e a existência das tabelas essenciais do RAG. A prontidão não verifica a disponibilidade da OpenAI. A inicialização do esquema é tentada no startup; falhas de banco são registradas sem impedir o processo HTTP de subir.
 
 Exemplo de requisição:
 
@@ -194,7 +194,7 @@ cortex-rag/
 - O limite de upload é de 15 MB.
 - Chunking utiliza janelas de caracteres, não segmentação semântica.
 - O limiar de similaridade é heurístico e requer calibração.
-- A avaliação atual não mede factualidade nem qualidade global das respostas.
+- A avaliação atual não mede factualidade nem qualidade global das respostas. A API reporta `evidence_retrieved` e `groundedness: not_evaluated`; recuperar trechos relevantes não comprova, por si só, que a resposta esteja fundamentada.
 - O corpus de teste é sintético; não utilizar documentos pessoais ou confidenciais.
 - Segredos devem permanecer em variáveis de ambiente e nunca ser versionados.
 
@@ -205,8 +205,8 @@ cortex-rag/
 - [x] Dataset sintético de 20 perguntas.
 - [x] Avaliador inicial de recuperação top-K.
 - [ ] Baseline integrado reproduzível.
-- [ ] Testes de integração para concorrência e idempotência.
-- [ ] Avaliação de groundedness e factualidade.
+- [x] Testes de contrato para liveness e readiness em falhas de banco.\n- [ ] Testes de integração para concorrência e idempotência.
+- [ ] Avaliação mensurável de groundedness e factualidade.
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
 - [ ] Métricas Prometheus, tracing distribuído e controle de acesso.
 - [ ] OCR e avaliação multimodal.
