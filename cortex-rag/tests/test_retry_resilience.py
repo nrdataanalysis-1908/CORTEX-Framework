@@ -1,4 +1,7 @@
+import httpx
 import pytest
+
+from openai import APIStatusError
 
 from app import resilience
 
@@ -103,6 +106,26 @@ def test_retry_call_stops_after_configured_attempts(monkeypatch):
     assert exhausted == [("test.operation", 3)]
 
 
-def test_openai_error_classification_rejects_unrelated_errors():
+def _status_error(status_code: int) -> APIStatusError:
+    request = httpx.Request("POST", "https://api.openai.com/v1/embeddings")
+    response = httpx.Response(status_code, request=request)
+    return APIStatusError(
+        message=f"upstream returned {status_code}",
+        response=response,
+        body={"error": "test"},
+    )
+
+
+@pytest.mark.parametrize("status_code", [408, 409, 429, 500, 503])
+def test_openai_transient_http_statuses_are_retryable(status_code):
+    assert resilience.is_retryable_openai_error(_status_error(status_code)) is True
+
+
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404, 422])
+def test_openai_permanent_http_statuses_are_not_retryable(status_code):
+    assert resilience.is_retryable_openai_error(_status_error(status_code)) is False
+
+
+def test_unrelated_exceptions_are_not_retryable():
     assert resilience.is_retryable_openai_error(TemporaryFailure()) is False
     assert resilience.is_retryable_openai_error(PermanentFailure()) is False
