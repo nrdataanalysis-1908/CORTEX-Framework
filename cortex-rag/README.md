@@ -66,7 +66,7 @@ O diretório evaluation contém um documento sintético e 20 perguntas com evid�
 evidence_hit_rate_at_k = evidence_hits / total_questions
 ~~~
 
-A métrica não deve ser interpretada como acurácia da resposta, factualidade, groundedness ou ausência de alucinação. Essas dimensões exigem protocolo próprio e revisão qualitativa.
+O avaliador reporta Recall@K, MRR@K e NDCG@K com relevância binária baseada na correspondência literal da evidência-ouro. Essas métricas medem recuperação e ordenação, não acurácia da resposta, factualidade, groundedness ou ausência de alucinação. Consulte o protocolo metodológico em [evaluation/README.md](evaluation/README.md).
 
 Consulte [evaluation/README.md](evaluation/README.md) para os detalhes e critérios de execução. Para medir latência e throughput sob concorrência controlada, consulte [evaluation/LOAD_TESTING.md](evaluation/LOAD_TESTING.md) e execute `python -m evaluation.load_test`.
 
