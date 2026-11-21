@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import uuid
 from contextlib import asynccontextmanager
 from time import perf_counter
@@ -12,6 +13,7 @@ from pydantic import BaseModel, Field
 from app.db import check_database, init_db
 from app.observability import metrics_snapshot, record_request
 from app.rag import answer_question, ingest
+from app.resilience import CircuitOpenError
 
 logger = logging.getLogger("cortex.startup")
 
@@ -78,6 +80,15 @@ class QuestionRequest(BaseModel):
     question: str = Field(min_length=3, max_length=2000)
 
 
+def _circuit_open_http_exception(exc: CircuitOpenError) -> HTTPException:
+    retry_after = max(1, math.ceil(exc.retry_after_seconds))
+    return HTTPException(
+        status_code=503,
+        detail="Provedor temporariamente indisponível; circuito de proteção aberto.",
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "cortex-rag", "check": "liveness"}
@@ -102,6 +113,8 @@ async def upload_document(file: UploadFile = File(...)):
         if len(data) > 15 * 1024 * 1024:
             raise HTTPException(status_code=413, detail="Arquivo excede o limite de 15 MB.")
         return ingest(file.filename or "documento", data)
+    except CircuitOpenError as exc:
+        raise _circuit_open_http_exception(exc) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -110,5 +123,7 @@ async def upload_document(file: UploadFile = File(...)):
 def ask(payload: QuestionRequest):
     try:
         return answer_question(payload.question)
+    except CircuitOpenError as exc:
+        raise _circuit_open_http_exception(exc) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Falha ao processar a consulta RAG.") from exc
