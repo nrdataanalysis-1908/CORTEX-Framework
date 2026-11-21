@@ -139,13 +139,27 @@ As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requi
 
 ### Observability and reliability baseline
 
+
 `GET /metrics` apresenta contagem de requisições, erros HTTP 5xx e percentis p50/p95/p99 calculados sobre uma janela em memória de até 10.000 observações. Esses dados são locais ao processo, reiniciam com a aplicação e não devem ser tratados como telemetria distribuída ou SLO de produção. O endpoint ainda não possui autenticação e deve permanecer restrito à rede confiável até que o controle de acesso seja implementado.
+
+O acesso à OpenAI é protegido por uma política de retry limitada e por um circuit breaker compartilhado entre as operações de embeddings e geração dentro do mesmo processo:
+
+- `CLOSED`: permite chamadas e contabiliza falhas transitórias consecutivas.
+- `OPEN`: bloqueia chamadas após atingir o limiar de falhas; a API retorna HTTP 503 com `Retry-After`.
+- `HALF_OPEN`: após o tempo de recuperação, permite uma única chamada de sondagem. Chamadas concorrentes são rejeitadas até a conclusão da sondagem.
+- Uma sondagem bem-sucedida fecha o circuito; uma falha transitória reabre o circuito. Erros permanentes de cliente não são contabilizados como indisponibilidade do provedor.
+
+O circuit breaker é thread-safe, mas seu estado é mantido em memória no processo. Portanto, múltiplos workers ou réplicas possuem circuitos independentes; coordenação distribuída não faz parte desta implementação. Os dados do breaker são expostos em `GET /metrics`, sob `upstream_circuit_breaker`, junto das métricas de retry.
 
 Variáveis adicionais:
 
 ~~~env
 OPENAI_TIMEOUT_SECONDS=30
 OPENAI_MAX_RETRIES=2
+OPENAI_RETRY_BASE_DELAY_SECONDS=0.5
+OPENAI_RETRY_MAX_DELAY_SECONDS=8
+CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
+CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS=30
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
 ~~~
 
@@ -210,10 +224,11 @@ cortex-rag/
 - [x] Testes de contrato para liveness e readiness em falhas de banco.
 - [x] Idempotência concorrente por hash com advisory lock transacional no PostgreSQL.
 - [x] Teste de integração concorrente contra PostgreSQL/pgvector no CI.
-- [ ] Testes integrados de rollback e retry após falhas na geração de embeddings e persistência de chunks.
+- [x] Testes integrados de rollback e retry após falhas na geração de embeddings e persistência de chunks.
 - [ ] Testes de carga para contenção de locks, throughput e latência p95/p99.
 - [ ] Avaliação mensurável de groundedness e factualidade.
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
+- [x] Retry limitado e circuit breaker thread-safe para indisponibilidade transitória da OpenAI.
 - [ ] Métricas Prometheus, tracing distribuído e controle de acesso.
 - [ ] OCR e avaliação multimodal.
 
