@@ -228,24 +228,3 @@ cortex-rag/
 <sub>Experimental implementation · engineering foundation in progress</sub>
 
 </div>
-
-
-### Circuit breaker — proteção do provedor
-
-As chamadas de embeddings e geração passam por um circuit breaker compartilhado no processo. O breaker considera uma operação malsucedida somente depois que a política de retry esgota as tentativas configuradas.
-
-- `CLOSED`: chamadas permitidas; falhas consecutivas são contabilizadas.
-- `OPEN`: chamadas bloqueadas quando o limiar de falhas é atingido.
-- `HALF_OPEN`: após o tempo de recuperação, somente uma chamada de prova é admitida. Chamadas concorrentes são rejeitadas até a prova terminar.
-- Sucesso na prova fecha o circuito; falha reabre o circuito e reinicia a janela de recuperação.
-
-Quando o circuito está aberto, os endpoints dependentes da OpenAI retornam HTTP 503 com o cabeçalho `Retry-After`. O endpoint `/health` continua indicando somente a liveness da API; `/ready` continua verificando o banco, não a disponibilidade do provedor.
-
-Configuração:
-
-~~~env
-CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
-CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS=30
-~~~
-
-O estado e os contadores são expostos em `/metrics`, incluindo transições, chamadas rejeitadas e sondagem HALF_OPEN em andamento. Esta implementação é thread-safe dentro de um processo, mas não coordena múltiplos workers ou réplicas. Em implantação distribuída, cada worker mantém seu próprio circuito; um breaker compartilhado exigirá armazenamento/coordenação externa.
