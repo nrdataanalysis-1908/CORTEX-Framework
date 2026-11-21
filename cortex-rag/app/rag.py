@@ -74,6 +74,8 @@ def ingest(filename: str, data: bytes) -> dict:
         raise ValueError("Nenhum texto extraível foi encontrado no arquivo.")
 
     digest = hashlib.sha256(data).hexdigest()
+    # Serialize identical payloads across API workers/processes. The transaction-scoped
+    # advisory lock is released automatically on commit or rollback.
     with connect() as conn:
         conn.execute(
             "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
@@ -85,6 +87,8 @@ def ingest(filename: str, data: bytes) -> dict:
         if existing:
             return {"document_id": existing[0], "chunks": 0, "status": "already_exists"}
 
+        # Keep the per-digest lock until both document metadata and all chunks commit.
+        # This prevents concurrent requests from generating duplicate embeddings.
         vectors = embed(chunks)
         if len(vectors) != len(chunks):
             raise RuntimeError("A quantidade de embeddings difere da quantidade de chunks.")
