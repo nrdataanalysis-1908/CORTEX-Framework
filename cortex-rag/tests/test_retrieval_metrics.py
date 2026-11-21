@@ -29,7 +29,7 @@ def test_ranking_summary_aggregates_query_metrics():
         "queries": 3,
         "recall": pytest.approx(2 / 3, abs=0.0001),
         "mrr": pytest.approx(0.5, abs=0.0001),
-        "ndcg": pytest.approx(2 / 3, abs=0.0001),
+        "ndcg": pytest.approx((1 + 1 / 1.5849625007) / 3, abs=0.0001),
     }
 
 
