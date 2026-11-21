@@ -135,7 +135,7 @@ A execução de avaliação requer PostgreSQL ativo, documento previamente inger
 | POST | /documents | PDF/TXT ingestion |
 | POST | /ask | Contextual question answering |
 
-As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito. O upload aceita apenas PDF e TXT, confere extensão, MIME e assinatura binária, rejeita PDFs criptografados/corrompidos e limita PDFs a 500 páginas. TXT exige UTF-8 válido; nomes de arquivo são normalizados para impedir persistência de caminhos fornecidos pelo cliente. O limite de tamanho permanece em 15 MB.
+As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito. O upload aceita apenas PDF e TXT, confere extensão, MIME e assinatura binária, rejeita PDFs criptografados/corrompidos e limita PDFs a 500 páginas. O texto extraído é limitado a 2 milhões de caracteres por documento e 250 mil caracteres por página PDF antes de seguir para chunking e embeddings. TXT exige UTF-8 válido; nomes de arquivo são normalizados para impedir persistência de caminhos fornecidos pelo cliente. O limite de tamanho permanece em 15 MB. Esses limites restringem o volume textual entregue às etapas seguintes, mas não substituem isolamento de processo e quotas de CPU/memória durante a execução do parser.
 
 ### Security and traffic controls
 
