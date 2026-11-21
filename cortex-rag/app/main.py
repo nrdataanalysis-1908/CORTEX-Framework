@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from app.db import check_database, init_db
 from app.observability import metrics_snapshot, record_request
 from app.rag import answer_question, ingest
-from app.resilience import CircuitOpenError
+from app.resilience import BulkheadFullError, CircuitOpenError
 
 logger = logging.getLogger("cortex.startup")
 
@@ -89,6 +89,15 @@ def _circuit_open_http_exception(exc: CircuitOpenError) -> HTTPException:
     )
 
 
+def _bulkhead_full_http_exception(exc: BulkheadFullError) -> HTTPException:
+    retry_after = max(1, math.ceil(exc.retry_after_seconds))
+    return HTTPException(
+        status_code=503,
+        detail=f"Capacidade concorrente esgotada para a operação {exc.operation}.",
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "cortex-rag", "check": "liveness"}
@@ -115,6 +124,8 @@ async def upload_document(file: UploadFile = File(...)):
         return ingest(file.filename or "documento", data)
     except CircuitOpenError as exc:
         raise _circuit_open_http_exception(exc) from exc
+    except BulkheadFullError as exc:
+        raise _bulkhead_full_http_exception(exc) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -125,5 +136,7 @@ def ask(payload: QuestionRequest):
         return answer_question(payload.question)
     except CircuitOpenError as exc:
         raise _circuit_open_http_exception(exc) from exc
+    except BulkheadFullError as exc:
+        raise _bulkhead_full_http_exception(exc) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Falha ao processar a consulta RAG.") from exc

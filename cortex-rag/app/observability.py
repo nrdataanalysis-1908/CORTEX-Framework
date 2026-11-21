@@ -81,7 +81,7 @@ def metrics_snapshot() -> dict:
         index = max(0, min(len(values) - 1, int((len(values) * quantile) + 0.999999) - 1))
         return round(values[index], 3)
 
-    from app.resilience import upstream_circuit_breaker
+    from app.resilience import chat_bulkhead, embedding_bulkhead, upstream_circuit_breaker
 
     return {
         "scope": "process_local",
@@ -96,5 +96,9 @@ def metrics_snapshot() -> dict:
         },
         "upstream_retries": retry_metrics,
         "upstream_circuit_breaker": upstream_circuit_breaker.snapshot(),
+        "upstream_bulkheads": {
+            "embeddings": embedding_bulkhead.snapshot(),
+            "chat": chat_bulkhead.snapshot(),
+        },
         "note": "Métricas em memória do processo; reiniciam com a aplicação e não substituem monitoramento distribuído.",
     }
