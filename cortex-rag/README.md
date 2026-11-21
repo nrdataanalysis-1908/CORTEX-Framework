@@ -135,7 +135,7 @@ A execução de avaliação requer PostgreSQL ativo, documento previamente inger
 | POST | /documents | PDF/TXT ingestion |
 | POST | /ask | Contextual question answering |
 
-As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito.
+As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito. O upload aceita apenas PDF e TXT, confere extensão, MIME e assinatura binária, rejeita PDFs criptografados/corrompidos e limita PDFs a 500 páginas. TXT exige UTF-8 válido; nomes de arquivo são normalizados para impedir persistência de caminhos fornecidos pelo cliente. O limite de tamanho permanece em 15 MB.
 
 ### Security and traffic controls
 
@@ -217,8 +217,8 @@ cortex-rag/
 ## 07 / Limitations and controls
 
 - PDFs escaneados não são processados; OCR não está incluído.
+- Uploads são limitados a 15 MB e 500 páginas por PDF; arquivos criptografados são rejeitados.
 - A autenticação usa uma chave de serviço compartilhada; não há identidade individual, RBAC ou isolamento multi-tenant.
-- O limite de upload é de 15 MB.
 - Chunking utiliza janelas de caracteres, não segmentação semântica.
 - O limiar de similaridade é heurístico e requer calibração.
 - A avaliação atual não mede factualidade nem qualidade global das respostas. A API reporta `evidence_retrieved` e `groundedness: not_evaluated`; recuperar trechos relevantes não comprova, por si só, que a resposta esteja fundamentada.
@@ -243,6 +243,7 @@ cortex-rag/
 - [x] Retry limitado e circuit breaker thread-safe para indisponibilidade transitória da OpenAI.
 - [x] Bulkheads independentes para limitar concorrência de embeddings e geração, com telemetria de saturação.
 - [x] API Key compartilhada e rate limiting atômico por chave no PostgreSQL.
+- [x] Validação de upload por extensão, MIME, assinatura, codificação, nome de arquivo e limite de páginas.
 - [ ] Métricas Prometheus e tracing distribuído.
 - [ ] OCR e avaliação multimodal.
 
