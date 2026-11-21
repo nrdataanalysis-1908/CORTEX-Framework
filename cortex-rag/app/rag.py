@@ -15,6 +15,7 @@ from app.observability import (
 )
 from app.resilience import (
     is_retryable_openai_error,
+    BulkheadFullError,
     retry_call,
     upstream_circuit_breaker,
     embedding_bulkhead,
@@ -51,7 +52,11 @@ def _call_openai(operation: str, call):
             on_permanent_failure=record_permanent_failure,
         )
 
-    return upstream_circuit_breaker.call(execute_with_retry, is_failure=is_retryable_openai_error)
+    return upstream_circuit_breaker.call(
+        execute_with_retry,
+        is_failure=is_retryable_openai_error,
+        is_ignored=lambda error: isinstance(error, BulkheadFullError),
+    )
 
 
 def extract_text(filename: str, data: bytes) -> str:
