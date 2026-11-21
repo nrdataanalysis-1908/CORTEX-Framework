@@ -7,12 +7,36 @@ from pypdf import PdfReader
 from app.chunking import split_text
 from app.config import settings
 from app.db import connect
+from app.observability import (
+    record_permanent_failure,
+    record_retry_attempt,
+    record_retry_exhausted,
+    record_retry_recovered,
+)
+from app.resilience import is_retryable_openai_error, retry_call
 
+# Application-level retry policy owns retries; disable hidden SDK retries to
+# prevent multiplicative attempts and make retry telemetry deterministic.
 client = OpenAI(
     api_key=settings.openai_api_key,
     timeout=settings.openai_timeout_seconds,
-    max_retries=settings.openai_max_retries,
+    max_retries=0,
 )
+
+
+def _call_openai(operation: str, call):
+    return retry_call(
+        operation,
+        call,
+        max_retries=settings.openai_max_retries,
+        base_delay_seconds=settings.openai_retry_base_delay_seconds,
+        max_delay_seconds=settings.openai_retry_max_delay_seconds,
+        is_retryable=is_retryable_openai_error,
+        on_retry=record_retry_attempt,
+        on_recovered=record_retry_recovered,
+        on_exhausted=record_retry_exhausted,
+        on_permanent_failure=record_permanent_failure,
+    )
 
 
 def extract_text(filename: str, data: bytes) -> str:
@@ -25,10 +49,13 @@ def extract_text(filename: str, data: bytes) -> str:
 
 
 def embed(texts: list[str]) -> list[list[float]]:
-    response = client.embeddings.create(
-        model=settings.embedding_model,
-        input=texts,
-        dimensions=settings.embedding_dimensions,
+    response = _call_openai(
+        "embeddings.create",
+        lambda: client.embeddings.create(
+            model=settings.embedding_model,
+            input=texts,
+            dimensions=settings.embedding_dimensions,
+        ),
     )
     return [item.embedding for item in response.data]
 
@@ -103,23 +130,26 @@ def answer_question(question: str) -> dict:
         f"[Fonte: {filename} | similaridade: {score:.3f}]\n{content}"
         for filename, content, score in rows
     )
-    completion = client.chat.completions.create(
-        model=settings.chat_model,
-        temperature=0,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Responda em português usando somente o contexto fornecido. "
-                    "Se o contexto não sustentar a resposta, declare que não há evidência suficiente. "
-                    "Não invente fatos. Cite os nomes dos arquivos usados."
-                ),
-            },
-            {
-                "role": "user",
-                "content": f"CONTEXTO:\n{context}\n\nPERGUNTA:\n{question}",
-            },
-        ],
+    completion = _call_openai(
+        "chat.completions.create",
+        lambda: client.chat.completions.create(
+            model=settings.chat_model,
+            temperature=0,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Responda em português usando somente o contexto fornecido. "
+                        "Se o contexto não sustentar a resposta, declare que não há evidência suficiente. "
+                        "Não invente fatos. Cite os nomes dos arquivos usados."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"CONTEXTO:\n{context}\n\nPERGUNTA:\n{question}",
+                },
+            ],
+        ),
     )
     return {
         "answer": completion.choices[0].message.content or "",

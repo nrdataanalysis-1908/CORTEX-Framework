@@ -1,12 +1,15 @@
 import logging
 import threading
 from collections import deque
-from time import perf_counter
 
 logger = logging.getLogger("cortex.request")
 _lock = threading.Lock()
 _request_count = 0
 _error_count = 0
+_retry_attempt_count = 0
+_retry_recovered_count = 0
+_retry_exhausted_count = 0
+_retry_permanent_failure_count = 0
 _recent_durations_ms = deque(maxlen=10_000)
 
 
@@ -29,11 +32,48 @@ def record_request(method: str, path: str, status_code: int, duration_ms: float,
     )
 
 
+def record_retry_attempt(operation: str, attempt: int, delay_seconds: float) -> None:
+    global _retry_attempt_count
+    with _lock:
+        _retry_attempt_count += 1
+    logger.warning(
+        "upstream_retry",
+        extra={"operation": operation, "attempt": attempt, "delay_seconds": round(delay_seconds, 4)},
+    )
+
+
+def record_retry_recovered(operation: str, attempts: int) -> None:
+    global _retry_recovered_count
+    with _lock:
+        _retry_recovered_count += 1
+    logger.info("upstream_retry_recovered", extra={"operation": operation, "attempts": attempts})
+
+
+def record_retry_exhausted(operation: str, attempts: int) -> None:
+    global _retry_exhausted_count
+    with _lock:
+        _retry_exhausted_count += 1
+    logger.error("upstream_retry_exhausted", extra={"operation": operation, "attempts": attempts})
+
+
+def record_permanent_failure(operation: str) -> None:
+    global _retry_permanent_failure_count
+    with _lock:
+        _retry_permanent_failure_count += 1
+    logger.error("upstream_permanent_failure", extra={"operation": operation})
+
+
 def metrics_snapshot() -> dict:
     with _lock:
         durations = sorted(_recent_durations_ms)
         request_count = _request_count
         error_count = _error_count
+        retry_metrics = {
+            "attempt_count": _retry_attempt_count,
+            "recovered_count": _retry_recovered_count,
+            "exhausted_count": _retry_exhausted_count,
+            "permanent_failure_count": _retry_permanent_failure_count,
+        }
 
     def percentile(values: list[float], quantile: float) -> float | None:
         if not values:
@@ -52,5 +92,6 @@ def metrics_snapshot() -> dict:
             "p95": percentile(durations, 0.95),
             "p99": percentile(durations, 0.99),
         },
+        "upstream_retries": retry_metrics,
         "note": "Métricas em memória do processo; reiniciam com a aplicação e não substituem monitoramento distribuído.",
     }
