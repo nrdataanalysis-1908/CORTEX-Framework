@@ -20,7 +20,8 @@ def check_database() -> bool:
             row = conn.execute(
                 """SELECT
                        to_regclass('public.rag_documents') IS NOT NULL
-                       AND to_regclass('public.rag_chunks') IS NOT NULL"""
+                       AND to_regclass('public.rag_chunks') IS NOT NULL
+                       AND to_regclass('public.api_rate_limits') IS NOT NULL"""
             ).fetchone()
         return bool(row and row[0])
     except psycopg.Error:
@@ -59,4 +60,11 @@ def init_db():
         conn.execute("""
             CREATE INDEX IF NOT EXISTS rag_chunks_embedding_hnsw
             ON rag_chunks USING hnsw (embedding vector_cosine_ops)
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS api_rate_limits (
+                key_hash CHAR(64) PRIMARY KEY,
+                window_start TIMESTAMPTZ NOT NULL,
+                request_count INTEGER NOT NULL CHECK (request_count >= 1)
+            )
         """)
