@@ -46,7 +46,7 @@ def retry_call(
             return result
         except Exception as error:
             if not is_retryable(error):
-                if on_permanent_failure:
+                if on_permanent_failure and not isinstance(error, BulkheadFullError):
                     on_permanent_failure(operation)
                 raise
             if attempt >= max_retries:
@@ -114,6 +114,7 @@ class CircuitBreaker:
         operation: Callable[[], T],
         *,
         is_failure: Callable[[Exception], bool] = lambda error: True,
+        is_ignored: Callable[[Exception], bool] = lambda error: False,
     ) -> T:
         now = self._clock()
         with self._lock:
@@ -143,7 +144,10 @@ class CircuitBreaker:
             with self._lock:
                 failed = is_failure(error)
                 if call_state == self.HALF_OPEN and self._state == self.HALF_OPEN and call_epoch == self._epoch:
-                    if failed:
+                    if is_ignored(error):
+                        # No upstream probe occurred (for example, local capacity was full).
+                        self._probe_in_flight = False
+                    elif failed:
                         self._open_locked(self._clock(), from_state=self.HALF_OPEN)
                     else:
                         # A permanent response (for example HTTP 400/401) proves
