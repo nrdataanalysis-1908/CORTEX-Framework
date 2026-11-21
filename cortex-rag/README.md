@@ -104,13 +104,13 @@ uvicorn app.main:app --reload
 
 Swagger UI: http://127.0.0.1:8000/docs
 
-### Unit tests
+### Tests
 
 ~~~powershell
 python -m pytest tests -q
 ~~~
 
-Os testes unitários de chunking, integridade do dataset e métricas de observabilidade não exigem conexão com banco ou chamadas à API OpenAI.
+A suíte contém testes unitários e testes de integração que exigem PostgreSQL 16 com pgvector ativo. Os testes de ingestão substituem o provedor de embeddings por funções controladas; não realizam chamadas à API OpenAI. O workflow do GitHub Actions provisiona PostgreSQL automaticamente.
 
 ### Retrieval evaluation
 
@@ -181,7 +181,9 @@ cortex-rag/
 ├── tests/
 │   ├── test_chunking.py
 │   ├── test_evaluation_dataset.py
-│   └── test_observability.py
+│   ├── test_observability.py
+│   ├── test_ingestion_idempotency.py
+│   └── test_ingestion_atomicity.py
 ├── .env.example
 ├── docker-compose.yml
 └── requirements.txt
@@ -208,6 +210,7 @@ cortex-rag/
 - [x] Testes de contrato para liveness e readiness em falhas de banco.
 - [x] Idempotência concorrente por hash com advisory lock transacional no PostgreSQL.
 - [x] Teste de integração concorrente contra PostgreSQL/pgvector no CI.
+- [ ] Testes integrados de rollback e retry após falhas na geração de embeddings e persistência de chunks.
 - [ ] Testes de carga para contenção de locks, throughput e latência p95/p99.
 - [ ] Avaliação mensurável de groundedness e factualidade.
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
