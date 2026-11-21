@@ -28,8 +28,15 @@ def check_database() -> bool:
 
 
 def init_db():
-    with connect() as conn:
+    # The pgvector type must exist before register_vector() inspects the connection.
+    # Bootstrap the extension with a plain psycopg connection on fresh databases.
+    with psycopg.connect(
+        settings.database_url,
+        connect_timeout=settings.database_connect_timeout_seconds,
+    ) as conn:
         conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+
+    with connect() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS rag_documents (
                 id BIGSERIAL PRIMARY KEY,
