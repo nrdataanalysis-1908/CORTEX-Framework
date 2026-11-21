@@ -46,7 +46,11 @@ def extract_validated_text(
             text = data.decode("utf-8-sig").strip()
         except UnicodeDecodeError as exc:
             raise ValueError("Arquivo TXT deve utilizar codificação UTF-8.") from exc
-        return text, safe_name
+        if not text:
+            raise ValueError("Nenhum texto foi encontrado no arquivo TXT.")
+        if not text:
+        raise ValueError("Nenhum texto extraível foi encontrado no arquivo PDF.")
+    return text, safe_name
 
     if not data.startswith(b"%PDF-"):
         raise ValueError("Assinatura do arquivo inválida: conteúdo não corresponde a PDF.")
