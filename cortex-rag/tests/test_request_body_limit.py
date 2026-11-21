@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from app.request_limits import RequestBodyLimitMiddleware
+from app.request_limits import RequestBodyLimitMiddleware, RequestBodyTooLarge
 
 
 def run_asgi(app, scope, messages):
@@ -168,7 +168,7 @@ def test_overflow_after_response_started_does_not_send_a_second_response_start()
     async def send(message):
         sent.append(message)
 
-    with pytest.raises(Exception, match=""):
+    with pytest.raises(RequestBodyTooLarge):
         asyncio.run(middleware(app)(make_scope(), receive, send))
 
     assert [m["type"] for m in sent].count("http.response.start") == 1
