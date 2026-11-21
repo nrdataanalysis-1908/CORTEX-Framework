@@ -6,6 +6,8 @@ from typing import TypeVar
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, InternalServerError, RateLimitError
 
+from app.config import settings
+
 T = TypeVar("T")
 
 
@@ -106,7 +108,12 @@ class CircuitBreaker:
         self._epoch += 1
         self._state_transitions["closed_to_open"] += 1
 
-    def call(self, operation: Callable[[], T]) -> T:
+    def call(
+        self,
+        operation: Callable[[], T],
+        *,
+        is_failure: Callable[[Exception], bool] = lambda error: True,
+    ) -> T:
         now = self._clock()
         with self._lock:
             if self._state == self.OPEN:
@@ -131,11 +138,18 @@ class CircuitBreaker:
 
         try:
             result = operation()
-        except Exception:
+        except Exception as error:
             with self._lock:
+                failed = is_failure(error)
                 if call_state == self.HALF_OPEN and self._state == self.HALF_OPEN and call_epoch == self._epoch:
-                    self._open_locked(self._clock())
-                elif call_state == self.CLOSED and self._state == self.CLOSED and call_epoch == self._epoch:
+                    if failed:
+                        self._open_locked(self._clock())
+                    else:
+                        # A permanent response (for example HTTP 400/401) proves
+                        # the upstream is reachable; propagate it without keeping
+                        # the circuit open.
+                        self._close_after_probe_locked()
+                elif failed and call_state == self.CLOSED and self._state == self.CLOSED and call_epoch == self._epoch:
                     self._failure_count += 1
                     if self._failure_count >= self.failure_threshold:
                         self._open_locked(self._clock())
@@ -152,6 +166,14 @@ class CircuitBreaker:
             elif call_state == self.CLOSED and self._state == self.CLOSED and call_epoch == self._epoch:
                 self._failure_count = 0
         return result
+
+    def _close_after_probe_locked(self) -> None:
+        self._state = self.CLOSED
+        self._failure_count = 0
+        self._opened_at = None
+        self._probe_in_flight = False
+        self._epoch += 1
+        self._state_transitions["half_open_to_closed"] += 1
 
     def snapshot(self) -> dict:
         now = self._clock()
@@ -171,8 +193,6 @@ class CircuitBreaker:
                 "transitions": dict(self._state_transitions),
             }
 
-
-from app.config import settings
 
 upstream_circuit_breaker = CircuitBreaker(
     failure_threshold=settings.circuit_breaker_failure_threshold,
