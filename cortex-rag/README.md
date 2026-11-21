@@ -135,7 +135,7 @@ A execução de avaliação requer PostgreSQL ativo, documento previamente inger
 | POST | /documents | PDF/TXT ingestion |
 | POST | /ask | Contextual question answering |
 
-As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito. O upload aceita apenas PDF e TXT, confere extensão, MIME e assinatura binária, rejeita PDFs criptografados/corrompidos e limita PDFs a 500 páginas. TXT exige UTF-8 válido; nomes de arquivo são normalizados para impedir persistência de caminhos fornecidos pelo cliente. O limite de tamanho permanece em 15 MB.
+As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito. O upload aceita apenas PDF e TXT, confere extensão, MIME e assinatura binária, rejeita PDFs criptografados/corrompidos, limita PDFs a 500 páginas e interrompe a coleta de texto ao atingir 5 milhões de caracteres extraídos. Esse teto limita o texto retido pelo pipeline, mas não constitui isolamento de CPU/memória do parser; execução em worker isolado com timeout e quotas permanece necessária para cenários hostis. TXT exige UTF-8 válido; nomes de arquivo são normalizados para impedir persistência de caminhos fornecidos pelo cliente. O limite de tamanho permanece em 15 MB.
 
 ### Security and traffic controls
 
@@ -217,7 +217,7 @@ cortex-rag/
 ## 07 / Limitations and controls
 
 - PDFs escaneados não são processados; OCR não está incluído.
-- Uploads são limitados a 15 MB e 500 páginas por PDF; arquivos criptografados são rejeitados.
+- Uploads são limitados a 15 MB, 500 páginas por PDF e 5 milhões de caracteres extraídos; arquivos criptografados são rejeitados. O limite de caracteres não substitui sandbox/worker com quotas de CPU, memória e tempo para o parser.
 - A autenticação usa uma chave de serviço compartilhada; não há identidade individual, RBAC ou isolamento multi-tenant.
 - Chunking utiliza janelas de caracteres, não segmentação semântica.
 - O limiar de similaridade é heurístico e requer calibração.
