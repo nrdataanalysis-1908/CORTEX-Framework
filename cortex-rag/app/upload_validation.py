@@ -48,9 +48,7 @@ def extract_validated_text(
             raise ValueError("Arquivo TXT deve utilizar codificação UTF-8.") from exc
         if not text:
             raise ValueError("Nenhum texto foi encontrado no arquivo TXT.")
-        if not text:
-        raise ValueError("Nenhum texto extraível foi encontrado no arquivo PDF.")
-    return text, safe_name
+        return text, safe_name
 
     if not data.startswith(b"%PDF-"):
         raise ValueError("Assinatura do arquivo inválida: conteúdo não corresponde a PDF.")
@@ -67,4 +65,6 @@ def extract_validated_text(
     except Exception as exc:
         raise ValueError("PDF inválido, corrompido ou incompatível com o parser.") from exc
 
+    if not text:
+        raise ValueError("Nenhum texto extraível foi encontrado no arquivo PDF.")
     return text, safe_name
