@@ -137,10 +137,10 @@ A execução de avaliação requer PostgreSQL ativo, documento previamente inger
 
 As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito.
 
-### Observability and reliability baseline
+### Security and traffic controls\n\nOs endpoints `/documents`, `/ask` e `/metrics` exigem `X-API-Key`. A chave é validada em tempo constante e nunca é persistida em texto puro. O controle de tráfego utiliza SHA-256 da chave como identificador e uma janela fixa por minuto armazenada no PostgreSQL. O incremento é atômico via `INSERT ... ON CONFLICT`, compartilhado entre workers e réplicas que utilizem o mesmo banco.\n\nO limite padrão é de 60 requisições por minuto por chave e pode ser ajustado por `API_RATE_LIMIT_REQUESTS_PER_MINUTE`. Ao exceder o limite, a API responde HTTP 429 com `Retry-After`. Se o banco não estiver disponível, o controle falha fechado com HTTP 503. `/health` e `/ready` permanecem públicos para probes de infraestrutura. O limite é por chave, não por usuário final ou endereço IP; quotas por tenant, políticas diferenciadas por rota e mitigação de ataques volumétricos na borda permanecem fora deste escopo.\n\n### Observability and reliability baseline
 
 
-`GET /metrics` apresenta contagem de requisições, erros HTTP 5xx e percentis p50/p95/p99 calculados sobre uma janela em memória de até 10.000 observações. Esses dados são locais ao processo, reiniciam com a aplicação e não devem ser tratados como telemetria distribuída ou SLO de produção. O endpoint ainda não possui autenticação e deve permanecer restrito à rede confiável até que o controle de acesso seja implementado.
+`GET /metrics` apresenta contagem de requisições, erros HTTP 5xx e percentis p50/p95/p99 calculados sobre uma janela em memória de até 10.000 observações. Esses dados são locais ao processo, reiniciam com a aplicação e não devem ser tratados como telemetria distribuída ou SLO de produção. O endpoint exige API Key e rate limit; ainda deve permanecer atrás de TLS e ingress confiável.
 
 O acesso à OpenAI é protegido por uma política de retry limitada e por um circuit breaker compartilhado entre as operações de embeddings e geração dentro do mesmo processo:
 
@@ -164,7 +164,7 @@ CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
 CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS=30
 EMBEDDING_MAX_CONCURRENCY=4
 CHAT_MAX_CONCURRENCY=4
-DATABASE_CONNECT_TIMEOUT_SECONDS=5
+DATABASE_CONNECT_TIMEOUT_SECONDS=5\nAPI_RATE_LIMIT_REQUESTS_PER_MINUTE=60
 ~~~
 
 `/health` verifica exclusivamente a liveness da API e permanece disponível mesmo quando a inicialização do banco falha. `/ready` verifica a conectividade PostgreSQL e a existência das tabelas essenciais do RAG. A prontidão não verifica a disponibilidade da OpenAI. A inicialização do esquema é tentada no startup; falhas de banco são registradas sem impedir o processo HTTP de subir.
@@ -210,7 +210,7 @@ cortex-rag/
 ## 07 / Limitations and controls
 
 - PDFs escaneados não são processados; OCR não está incluído.
-- Não há autenticação, autorização ou isolamento entre usuários.
+- A autenticação usa uma chave de serviço compartilhada; não há identidade individual, RBAC ou isolamento multi-tenant.
 - O limite de upload é de 15 MB.
 - Chunking utiliza janelas de caracteres, não segmentação semântica.
 - O limiar de similaridade é heurístico e requer calibração.
@@ -235,7 +235,7 @@ cortex-rag/
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
 - [x] Retry limitado e circuit breaker thread-safe para indisponibilidade transitória da OpenAI.
 - [x] Bulkheads independentes para limitar concorrência de embeddings e geração, com telemetria de saturação.
-- [ ] Métricas Prometheus, tracing distribuído e controle de acesso.
+- [x] API Key compartilhada e rate limiting atômico por chave no PostgreSQL.\n- [ ] Métricas Prometheus e tracing distribuído.
 - [ ] OCR e avaliação multimodal.
 
 ---
