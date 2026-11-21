@@ -216,7 +216,8 @@ cortex-rag/
 
 ## 07 / Limitations and controls
 
-- PDFs escaneados não são processados; OCR não está incluído.\n- Uploads são limitados a 15 MB e 500 páginas por PDF; arquivos criptografados são rejeitados.
+- PDFs escaneados não são processados; OCR não está incluído.
+- Uploads são limitados a 15 MB e 500 páginas por PDF; arquivos criptografados são rejeitados.
 - A autenticação usa uma chave de serviço compartilhada; não há identidade individual, RBAC ou isolamento multi-tenant.
 - O limite de upload é de 15 MB.
 - Chunking utiliza janelas de caracteres, não segmentação semântica.
@@ -242,7 +243,8 @@ cortex-rag/
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
 - [x] Retry limitado e circuit breaker thread-safe para indisponibilidade transitória da OpenAI.
 - [x] Bulkheads independentes para limitar concorrência de embeddings e geração, com telemetria de saturação.
-- [x] API Key compartilhada e rate limiting atômico por chave no PostgreSQL.\n- [x] Validação de upload por extensão, MIME, assinatura, codificação, nome de arquivo e limite de páginas.
+- [x] API Key compartilhada e rate limiting atômico por chave no PostgreSQL.
+- [x] Validação de upload por extensão, MIME, assinatura, codificação, nome de arquivo e limite de páginas.
 - [ ] Métricas Prometheus e tracing distribuído.
 - [ ] OCR e avaliação multimodal.
 
