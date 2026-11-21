@@ -219,7 +219,6 @@ cortex-rag/
 - PDFs escaneados não são processados; OCR não está incluído.
 - Uploads são limitados a 15 MB e 500 páginas por PDF; arquivos criptografados são rejeitados.
 - A autenticação usa uma chave de serviço compartilhada; não há identidade individual, RBAC ou isolamento multi-tenant.
-- O limite de upload é de 15 MB.
 - Chunking utiliza janelas de caracteres, não segmentação semântica.
 - O limiar de similaridade é heurístico e requer calibração.
 - A avaliação atual não mede factualidade nem qualidade global das respostas. A API reporta `evidence_retrieved` e `groundedness: not_evaluated`; recuperar trechos relevantes não comprova, por si só, que a resposta esteja fundamentada.
