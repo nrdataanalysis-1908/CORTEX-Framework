@@ -57,9 +57,20 @@ app = FastAPI(
 )
 
 
+def _resolve_request_id(candidate: str | None) -> str:
+    """Accept only short printable ASCII request IDs; replace unsafe values."""
+    if (
+        candidate
+        and len(candidate) <= 128
+        and all(0x21 <= ord(char) <= 0x7E for char in candidate)
+    ):
+        return candidate
+    return str(uuid.uuid4())
+
+
 @app.middleware("http")
 async def request_observability(request: Request, call_next):
-    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    request_id = _resolve_request_id(request.headers.get("X-Request-ID"))
     started = perf_counter()
     status_code = 500
     try:
