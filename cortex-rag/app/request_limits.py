@@ -2,15 +2,10 @@ class RequestBodyTooLarge(Exception):
     """Raised when an incoming HTTP request exceeds its configured body limit."""
 
 
-class InvalidContentLength(Exception):
-    """Raised when Content-Length is malformed or ambiguous."""
-
-
 class RequestBodyLimitMiddleware:
     """Bound request-body bytes before Starlette parses multipart uploads.
 
-    The middleware counts streamed ASGI messages, so requests without a
-    Content-Length header are covered as well. It does not buffer the body.
+    The middleware counts streamed ASGI messages without buffering the body.
     """
 
     def __init__(self, app, max_body_bytes: int, protected_path: str):
@@ -36,8 +31,6 @@ class RequestBodyLimitMiddleware:
             if name.lower() == b"content-length"
         ]
         if content_lengths:
-            # Multiple Content-Length fields are rejected to avoid parser
-            # disagreement between the ASGI server and application.
             if len(content_lengths) != 1:
                 await self._send_error(send, 400, "Invalid Content-Length header.")
                 return
@@ -45,12 +38,12 @@ class RequestBodyLimitMiddleware:
             if not raw_length or not raw_length.isdigit():
                 await self._send_error(send, 400, "Invalid Content-Length header.")
                 return
-            declared_length = int(raw_length)
-            if declared_length > self.max_body_bytes:
+            if int(raw_length) > self.max_body_bytes:
                 await self._send_error(send, 413, "Request body exceeds the configured limit.")
                 return
 
         received_bytes = 0
+        response_started = False
 
         async def limited_receive():
             nonlocal received_bytes
@@ -61,10 +54,23 @@ class RequestBodyLimitMiddleware:
                     raise RequestBodyTooLarge
             return message
 
+        async def tracked_send(message):
+            nonlocal response_started
+            if message.get("type") == "http.response.start":
+                response_started = True
+            await send(message)
+
         try:
-            await self.app(scope, limited_receive, send)
+            await self.app(scope, limited_receive, tracked_send)
         except RequestBodyTooLarge:
-            await self._send_error(send, 413, "Request body exceeds the configured limit.")
+            # ASGI forbids a second response.start. If the downstream app has
+            # already started its response, propagate the exception so the
+            # server terminates the incomplete response instead of double-send.
+            if response_started:
+                raise
+            await self._send_error(
+                send, 413, "Request body exceeds the configured limit."
+            )
 
     @staticmethod
     async def _send_error(send, status_code: int, detail: str):
