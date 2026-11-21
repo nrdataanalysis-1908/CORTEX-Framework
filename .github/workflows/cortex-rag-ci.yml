@@ -42,6 +42,7 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}/cortex-rag
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cortex
       OPENAI_API_KEY: sk-test-placeholder
+      CORTEX_API_KEY: ci-test-api-key-with-at-least-32-chars
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
