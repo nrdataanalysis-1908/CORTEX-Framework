@@ -131,7 +131,8 @@ def test_rate_limit_is_atomic_across_concurrent_postgres_connections(monkeypatch
 
         assert outcomes.count("allowed") == limit
         assert outcomes.count("limited") == 24 - limit
-        assert row[1] == limit
+        # The limiter caps persisted counts at limit + 1 as an overflow sentinel.
+        assert row[1] == limit + 1
     finally:
         with connect() as conn:
             conn.execute("DELETE FROM api_rate_limits WHERE key_hash = %s", (key_hash,))
