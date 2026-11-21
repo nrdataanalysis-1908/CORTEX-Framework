@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str
     openai_api_key: str
+    cortex_api_key: str = Field(min_length=32)
     embedding_model: str = "text-embedding-3-small"
     chat_model: str = "gpt-4o-mini"
     embedding_dimensions: int = 1536
