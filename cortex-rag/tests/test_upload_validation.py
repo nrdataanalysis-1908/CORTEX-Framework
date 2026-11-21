@@ -110,3 +110,63 @@ def test_windows_path_is_reduced_to_filename():
 
     assert text == "valid content"
     assert filename == "document.txt"
+
+
+def test_txt_extracted_text_limit_is_enforced():
+    from app.upload_validation import MAX_EXTRACTED_TEXT_CHARS
+
+    payload = ("x" * (MAX_EXTRACTED_TEXT_CHARS + 1)).encode("utf-8")
+    with pytest.raises(ValueError, match="Texto extraído excede o limite"):
+        extract_validated_text("large.txt", payload, "text/plain")
+
+
+def test_pdf_per_page_extracted_text_limit_is_enforced(monkeypatch):
+    from app import upload_validation
+
+    class FakePage:
+        def extract_text(self):
+            return "x" * (upload_validation.MAX_PDF_PAGE_TEXT_CHARS + 1)
+
+    class FakePages:
+        def __len__(self):
+            return 1
+
+        def __iter__(self):
+            return iter([FakePage()])
+
+    class FakeReader:
+        is_encrypted = False
+
+        def __init__(self, *_args, **_kwargs):
+            self.pages = FakePages()
+
+    monkeypatch.setattr(upload_validation, "PdfReader", FakeReader)
+    with pytest.raises(ValueError, match="Página 1 excede o limite"):
+        extract_validated_text("large.pdf", b"%PDF-1.7\\nplaceholder", "application/pdf")
+
+
+def test_pdf_total_extracted_text_limit_is_enforced(monkeypatch):
+    from app import upload_validation
+
+    page_text = "x" * upload_validation.MAX_PDF_PAGE_TEXT_CHARS
+
+    class FakePage:
+        def extract_text(self):
+            return page_text
+
+    class FakePages:
+        def __len__(self):
+            return 9
+
+        def __iter__(self):
+            return iter(FakePage() for _ in range(9))
+
+    class FakeReader:
+        is_encrypted = False
+
+        def __init__(self, *_args, **_kwargs):
+            self.pages = FakePages()
+
+    monkeypatch.setattr(upload_validation, "PdfReader", FakeReader)
+    with pytest.raises(ValueError, match="Texto extraído excede o limite"):
+        extract_validated_text("large.pdf", b"%PDF-1.7\\nplaceholder", "application/pdf")
