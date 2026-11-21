@@ -1,3 +1,4 @@
+import hmac
 import json
 import logging
 import math
@@ -6,10 +7,11 @@ from contextlib import asynccontextmanager
 from time import perf_counter
 
 import psycopg
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from app.config import settings
 from app.db import check_database, init_db
 from app.observability import metrics_snapshot, record_request
 from app.rag import answer_question, ingest
@@ -76,6 +78,16 @@ async def request_observability(request: Request, call_next):
     return response
 
 
+def require_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
+    """Reject requests without the configured service API key."""
+    if x_api_key is None or not hmac.compare_digest(x_api_key, settings.cortex_api_key):
+        raise HTTPException(
+            status_code=401,
+            detail="API key ausente ou inválida.",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+
+
 class QuestionRequest(BaseModel):
     question: str = Field(min_length=3, max_length=2000)
 
@@ -111,12 +123,15 @@ def readiness():
 
 
 @app.get("/metrics")
-def metrics():
+def metrics(_: None = Depends(require_api_key)):
     return JSONResponse(metrics_snapshot())
 
 
 @app.post("/documents", status_code=201)
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    _: None = Depends(require_api_key),
+):
     try:
         data = await file.read(15 * 1024 * 1024 + 1)
         if len(data) > 15 * 1024 * 1024:
@@ -131,7 +146,7 @@ async def upload_document(file: UploadFile = File(...)):
 
 
 @app.post("/ask")
-def ask(payload: QuestionRequest):
+def ask(payload: QuestionRequest, _: None = Depends(require_api_key)):
     try:
         return answer_question(payload.question)
     except CircuitOpenError as exc:
