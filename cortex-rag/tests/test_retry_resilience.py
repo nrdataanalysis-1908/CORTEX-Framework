@@ -129,3 +129,140 @@ def test_openai_permanent_http_statuses_are_not_retryable(status_code):
 def test_unrelated_exceptions_are_not_retryable():
     assert resilience.is_retryable_openai_error(TemporaryFailure()) is False
     assert resilience.is_retryable_openai_error(PermanentFailure()) is False
+
+
+def test_circuit_breaker_opens_after_failure_threshold():
+    breaker = resilience.CircuitBreaker(failure_threshold=2, recovery_timeout_seconds=10)
+    failures = 0
+
+    def unavailable():
+        nonlocal failures
+        failures += 1
+        raise TemporaryFailure("upstream unavailable")
+
+    for _ in range(2):
+        with pytest.raises(TemporaryFailure):
+            breaker.call(unavailable)
+
+    assert failures == 2
+    snapshot = breaker.snapshot()
+    assert snapshot["state"] == resilience.CircuitBreaker.OPEN
+    assert snapshot["consecutive_failures"] == 2
+    assert snapshot["transitions"]["closed_to_open"] == 1
+
+    with pytest.raises(resilience.CircuitOpenError):
+        breaker.call(lambda: "must not execute")
+    assert failures == 2
+    assert breaker.snapshot()["rejected_calls"] == 1
+
+
+def test_circuit_breaker_half_open_probe_recovers():
+    now = [100.0]
+    breaker = resilience.CircuitBreaker(
+        failure_threshold=1,
+        recovery_timeout_seconds=5,
+        clock=lambda: now[0],
+    )
+
+    with pytest.raises(TemporaryFailure):
+        breaker.call(lambda: (_ for _ in ()).throw(TemporaryFailure("down")))
+    assert breaker.snapshot()["state"] == resilience.CircuitBreaker.OPEN
+
+    now[0] += 5
+    assert breaker.call(lambda: "healthy") == "healthy"
+    snapshot = breaker.snapshot()
+    assert snapshot["state"] == resilience.CircuitBreaker.CLOSED
+    assert snapshot["consecutive_failures"] == 0
+    assert snapshot["transitions"]["open_to_half_open"] == 1
+    assert snapshot["transitions"]["half_open_to_closed"] == 1
+
+
+def test_circuit_breaker_failed_half_open_probe_reopens():
+    now = [10.0]
+    breaker = resilience.CircuitBreaker(
+        failure_threshold=1,
+        recovery_timeout_seconds=3,
+        clock=lambda: now[0],
+    )
+
+    with pytest.raises(TemporaryFailure):
+        breaker.call(lambda: (_ for _ in ()).throw(TemporaryFailure("down")))
+    now[0] += 3
+
+    with pytest.raises(TemporaryFailure):
+        breaker.call(lambda: (_ for _ in ()).throw(TemporaryFailure("still down")))
+
+    snapshot = breaker.snapshot()
+    assert snapshot["state"] == resilience.CircuitBreaker.OPEN
+    assert snapshot["transitions"]["closed_to_open"] == 2
+
+
+def test_circuit_breaker_allows_only_one_concurrent_half_open_probe():
+    import threading
+
+    now = [0.0]
+    breaker = resilience.CircuitBreaker(
+        failure_threshold=1,
+        recovery_timeout_seconds=1,
+        clock=lambda: now[0],
+    )
+    with pytest.raises(TemporaryFailure):
+        breaker.call(lambda: (_ for _ in ()).throw(TemporaryFailure("down")))
+    now[0] = 1.0
+
+    entered = threading.Event()
+    release = threading.Event()
+    result = []
+
+    def probe():
+        entered.set()
+        assert release.wait(timeout=2)
+        return "recovered"
+
+    worker = threading.Thread(target=lambda: result.append(breaker.call(probe)))
+    worker.start()
+    assert entered.wait(timeout=2)
+
+    with pytest.raises(resilience.CircuitOpenError):
+        breaker.call(lambda: "second probe must not execute")
+
+    release.set()
+    worker.join(timeout=2)
+    assert not worker.is_alive()
+    assert result == ["recovered"]
+    assert breaker.snapshot()["state"] == resilience.CircuitBreaker.CLOSED
+    assert breaker.snapshot()["rejected_calls"] == 1
+
+
+def test_circuit_breaker_does_not_reset_after_stale_concurrent_success():
+    import threading
+
+    breaker = resilience.CircuitBreaker(failure_threshold=1, recovery_timeout_seconds=10)
+    entered = threading.Event()
+    release = threading.Event()
+    result = []
+
+    def slow_success():
+        entered.set()
+        assert release.wait(timeout=2)
+        return "late success"
+
+    worker = threading.Thread(target=lambda: result.append(breaker.call(slow_success)))
+    worker.start()
+    assert entered.wait(timeout=2)
+
+    with pytest.raises(TemporaryFailure):
+        breaker.call(lambda: (_ for _ in ()).throw(TemporaryFailure("failure opens circuit")))
+
+    release.set()
+    worker.join(timeout=2)
+    assert not worker.is_alive()
+    assert result == ["late success"]
+    assert breaker.snapshot()["state"] == resilience.CircuitBreaker.OPEN
+
+
+def test_circuit_breaker_rejects_invalid_configuration():
+    with pytest.raises(ValueError):
+        resilience.CircuitBreaker(failure_threshold=0)
+    with pytest.raises(ValueError):
+        resilience.CircuitBreaker(recovery_timeout_seconds=0)
