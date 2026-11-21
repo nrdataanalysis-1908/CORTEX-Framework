@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     database_url: str
     openai_api_key: str
     api_access_token: str | None = Field(default=None, min_length=32)
+    api_rate_limit_requests_per_minute: int = Field(default=60, ge=1, le=100_000)
     embedding_model: str = "text-embedding-3-small"
     chat_model: str = "gpt-4o-mini"
     embedding_dimensions: int = 1536
