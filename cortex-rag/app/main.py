@@ -134,7 +134,7 @@ async def upload_document(file: UploadFile = File(...)):
         data = await file.read(15 * 1024 * 1024 + 1)
         if len(data) > 15 * 1024 * 1024:
             raise HTTPException(status_code=413, detail="Arquivo excede o limite de 15 MB.")
-        return ingest(file.filename or "documento", data)
+        return ingest(file.filename or "", data, file.content_type)
     except CircuitOpenError as exc:
         raise _circuit_open_http_exception(exc) from exc
     except BulkheadFullError as exc:
