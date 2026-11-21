@@ -194,7 +194,7 @@ def test_circuit_breaker_failed_half_open_probe_reopens():
 
     snapshot = breaker.snapshot()
     assert snapshot["state"] == resilience.CircuitBreaker.OPEN
-    assert snapshot["transitions"]["closed_to_open"] == 2
+    assert snapshot["transitions"]["half_open_to_open"] == 1
 
 
 def test_circuit_breaker_allows_only_one_concurrent_half_open_probe():
