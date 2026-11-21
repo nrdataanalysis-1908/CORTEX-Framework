@@ -181,7 +181,9 @@ cortex-rag/
 ├── tests/
 │   ├── test_chunking.py
 │   ├── test_evaluation_dataset.py
-│   └── test_observability.py
+│   ├── test_observability.py
+│   ├── test_ingestion_idempotency.py
+│   └── test_ingestion_atomicity.py
 ├── .env.example
 ├── docker-compose.yml
 └── requirements.txt
