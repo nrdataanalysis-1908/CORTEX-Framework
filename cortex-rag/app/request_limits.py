@@ -2,17 +2,22 @@ class RequestBodyTooLarge(Exception):
     """Raised when an incoming HTTP request exceeds its configured body limit."""
 
 
+class InvalidContentLength(Exception):
+    """Raised when Content-Length is malformed or ambiguous."""
+
+
 class RequestBodyLimitMiddleware:
     """Bound request-body bytes before Starlette parses multipart uploads.
 
-    The middleware counts streamed ASGI messages, so chunked requests without a
-    Content-Length header are covered as well. It only applies to the configured
-    upload endpoint and does not buffer the request body.
+    The middleware counts streamed ASGI messages, so requests without a
+    Content-Length header are covered as well. It does not buffer the body.
     """
 
     def __init__(self, app, max_body_bytes: int, protected_path: str):
         if max_body_bytes <= 0:
             raise ValueError("max_body_bytes must be positive")
+        if not protected_path.startswith("/"):
+            raise ValueError("protected_path must be an absolute path")
         self.app = app
         self.max_body_bytes = max_body_bytes
         self.protected_path = protected_path
@@ -26,15 +31,23 @@ class RequestBodyLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        headers = dict(scope.get("headers", []))
-        content_length = headers.get(b"content-length")
-        if content_length is not None:
-            try:
-                declared_length = int(content_length)
-            except (TypeError, ValueError):
-                declared_length = None
-            if declared_length is not None and declared_length > self.max_body_bytes:
-                await self._send_too_large(send)
+        content_lengths = [
+            value for name, value in scope.get("headers", [])
+            if name.lower() == b"content-length"
+        ]
+        if content_lengths:
+            # Multiple Content-Length fields are rejected to avoid parser
+            # disagreement between the ASGI server and application.
+            if len(content_lengths) != 1:
+                await self._send_error(send, 400, "Invalid Content-Length header.")
+                return
+            raw_length = content_lengths[0]
+            if not raw_length or not raw_length.isdigit():
+                await self._send_error(send, 400, "Invalid Content-Length header.")
+                return
+            declared_length = int(raw_length)
+            if declared_length > self.max_body_bytes:
+                await self._send_error(send, 413, "Request body exceeds the configured limit.")
                 return
 
         received_bytes = 0
@@ -51,15 +64,15 @@ class RequestBodyLimitMiddleware:
         try:
             await self.app(scope, limited_receive, send)
         except RequestBodyTooLarge:
-            await self._send_too_large(send)
+            await self._send_error(send, 413, "Request body exceeds the configured limit.")
 
     @staticmethod
-    async def _send_too_large(send):
-        body = b'{"detail":"Request body exceeds the configured limit."}'
+    async def _send_error(send, status_code: int, detail: str):
+        body = ('{"detail":"' + detail + '"}').encode("utf-8")
         await send(
             {
                 "type": "http.response.start",
-                "status": 413,
+                "status": status_code,
                 "headers": [
                     (b"content-type", b"application/json"),
                     (b"content-length", str(len(body)).encode("ascii")),
