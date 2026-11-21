@@ -14,9 +14,9 @@ ALLOWED_CONTENT_TYPES = {
 
 
 def _safe_filename(filename: str) -> str:
-    if not filename or "\\x00" in filename:
+    if not filename or "\x00" in filename:
         raise ValueError("Nome de arquivo inválido.")
-    normalized = filename.replace("\\\\", "/").strip()
+    normalized = filename.replace("\\", "/").strip()
     name = PurePosixPath(normalized).name
     if not name or name in {".", ".."} or len(name) > MAX_FILENAME_LENGTH:
         raise ValueError("Nome de arquivo inválido ou excede 255 caracteres.")
@@ -42,7 +42,7 @@ def extract_validated_text(
         raise ValueError("O arquivo está vazio.")
 
     if extension == ".txt":
-        if b"\\x00" in data:
+        if b"\x00" in data:
             raise ValueError("Arquivo TXT contém bytes nulos e não é um texto UTF-8 válido.")
         try:
             text = data.decode("utf-8-sig").strip()
@@ -83,7 +83,7 @@ def extract_validated_text(
                 )
             if page_text:
                 extracted_pages.append(page_text)
-        text = "\\n".join(extracted_pages).strip()
+        text = "\n".join(extracted_pages).strip()
     except ValueError:
         raise
     except Exception as exc:
