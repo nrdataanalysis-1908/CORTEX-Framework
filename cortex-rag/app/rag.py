@@ -1,8 +1,5 @@
 import hashlib
-from io import BytesIO
-
 from openai import OpenAI
-from pypdf import PdfReader
 
 from app.chunking import split_text
 from app.config import settings
@@ -13,6 +10,7 @@ from app.observability import (
     record_retry_exhausted,
     record_retry_recovered,
 )
+from app.upload_validation import extract_validated_text
 from app.resilience import (
     is_retryable_openai_error,
     BulkheadFullError,
@@ -59,13 +57,9 @@ def _call_openai(operation: str, call):
     )
 
 
-def extract_text(filename: str, data: bytes) -> str:
-    if filename.lower().endswith(".pdf"):
-        reader = PdfReader(BytesIO(data))
-        return "\n".join(page.extract_text() or "" for page in reader.pages).strip()
-    if filename.lower().endswith(".txt"):
-        return data.decode("utf-8-sig").strip()
-    raise ValueError("Formato não suportado. Envie PDF ou TXT.")
+def extract_text(filename: str, data: bytes, content_type: str | None = None) -> str:
+    text, _ = extract_validated_text(filename, data, content_type)
+    return text
 
 
 def embed(texts: list[str]) -> list[list[float]]:
@@ -80,8 +74,8 @@ def embed(texts: list[str]) -> list[list[float]]:
     return [item.embedding for item in response.data]
 
 
-def ingest(filename: str, data: bytes) -> dict:
-    text = extract_text(filename, data)
+def ingest(filename: str, data: bytes, content_type: str | None = None) -> dict:
+    text = extract_text(filename, data, content_type)
     chunks = split_text(text, settings.chunk_size, settings.chunk_overlap)
     if not chunks:
         raise ValueError("Nenhum texto extraível foi encontrado no arquivo.")
