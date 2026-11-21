@@ -75,7 +75,7 @@ def embed(texts: list[str]) -> list[list[float]]:
 
 
 def ingest(filename: str, data: bytes, content_type: str | None = None) -> dict:
-    text = extract_text(filename, data, content_type)
+    text, safe_filename = extract_validated_text(filename, data, content_type)
     chunks = split_text(text, settings.chunk_size, settings.chunk_overlap)
     if not chunks:
         raise ValueError("Nenhum texto extraível foi encontrado no arquivo.")
@@ -104,7 +104,7 @@ def ingest(filename: str, data: bytes, content_type: str | None = None) -> dict:
             """INSERT INTO rag_documents (filename, content_sha256)
                VALUES (%s, %s)
                RETURNING id""",
-            (filename, digest),
+            (safe_filename, digest),
         ).fetchone()
         document_id = doc[0]
         with conn.cursor() as cursor:
