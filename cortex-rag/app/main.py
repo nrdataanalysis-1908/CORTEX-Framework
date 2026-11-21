@@ -15,7 +15,12 @@ from app.db import check_database, init_db
 from app.observability import metrics_snapshot, record_request
 from app.rag import answer_question, ingest
 from app.rate_limit import enforce_api_rate_limit
+from app.request_limits import RequestBodyLimitMiddleware
 from app.resilience import BulkheadFullError, CircuitOpenError
+
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+# Allow bounded multipart framing/metadata in addition to the 15 MiB file payload.
+MAX_REQUEST_BODY_BYTES = MAX_UPLOAD_BYTES + 1024 * 1024
 
 logger = logging.getLogger("cortex.startup")
 
@@ -54,6 +59,11 @@ app = FastAPI(
     description="RAG documental com FastAPI, PostgreSQL e pgvector.",
     version="0.5.0",
     lifespan=lifespan,
+)
+app.add_middleware(
+    RequestBodyLimitMiddleware,
+    max_body_bytes=MAX_REQUEST_BODY_BYTES,
+    protected_path="/documents",
 )
 
 
@@ -127,8 +137,6 @@ def readiness():
 def metrics():
     return JSONResponse(metrics_snapshot())
 
-
-MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 
 
 async def _read_upload_limited(file: UploadFile) -> bytes:
