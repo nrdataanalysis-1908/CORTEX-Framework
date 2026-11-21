@@ -369,3 +369,35 @@ def test_bulkhead_rejection_does_not_close_half_open_circuit():
     assert snapshot["half_open_probe_in_flight"] is False
     assert breaker.call(lambda: "upstream recovered") == "upstream recovered"
     assert breaker.snapshot()["state"] == resilience.CircuitBreaker.CLOSED
+
+
+def test_bulkhead_slot_is_released_before_retry_backoff(monkeypatch):
+    bulkhead = resilience.Bulkhead("embeddings", max_concurrency=1)
+    calls = 0
+    during_backoff = []
+
+    def flaky_operation():
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise TemporaryFailure("transient")
+        return "recovered"
+
+    def observe_backoff(_delay):
+        during_backoff.append(bulkhead.call(lambda: "other request admitted"))
+
+    monkeypatch.setattr(resilience.time, "sleep", observe_backoff)
+
+    result = resilience.retry_call(
+        "embeddings.create",
+        lambda: bulkhead.call(flaky_operation),
+        max_retries=1,
+        base_delay_seconds=0.01,
+        max_delay_seconds=0.01,
+        is_retryable=_is_temporary,
+    )
+
+    assert result == "recovered"
+    assert calls == 2
+    assert during_backoff == ["other request admitted"]
+    assert bulkhead.snapshot()["in_flight"] == 0
