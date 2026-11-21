@@ -149,6 +149,8 @@ O acesso à OpenAI é protegido por uma política de retry limitada e por um cir
 - `HALF_OPEN`: após o tempo de recuperação, permite uma única chamada de sondagem. Chamadas concorrentes são rejeitadas até a conclusão da sondagem.
 - Uma sondagem bem-sucedida fecha o circuito; uma falha transitória reabre o circuito. Erros permanentes de cliente não são contabilizados como indisponibilidade do provedor.
 
+O acesso ao provedor também utiliza Bulkheads independentes para embeddings e geração. Cada operação possui limite configurável de chamadas simultâneas; ao atingir a capacidade, a API rejeita novas chamadas imediatamente com HTTP 503 e `Retry-After`, sem enfileiramento ilimitado. A vaga é adquirida somente durante cada tentativa de rede e liberada antes do backoff, inclusive em caso de exceção. Rejeições locais por capacidade não contam como falha do provedor nem encerram indevidamente uma sondagem HALF_OPEN. Os contadores de chamadas em voo e rejeições ficam disponíveis em `GET /metrics`, sob `upstream_bulkheads`.
+
 O circuit breaker é thread-safe, mas seu estado é mantido em memória no processo. Portanto, múltiplos workers ou réplicas possuem circuitos independentes; coordenação distribuída não faz parte desta implementação. Os dados do breaker são expostos em `GET /metrics`, sob `upstream_circuit_breaker`, junto das métricas de retry.
 
 Variáveis adicionais:
@@ -160,6 +162,8 @@ OPENAI_RETRY_BASE_DELAY_SECONDS=0.5
 OPENAI_RETRY_MAX_DELAY_SECONDS=8
 CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
 CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SECONDS=30
+EMBEDDING_MAX_CONCURRENCY=4
+CHAT_MAX_CONCURRENCY=4
 DATABASE_CONNECT_TIMEOUT_SECONDS=5
 ~~~
 
@@ -229,6 +233,7 @@ cortex-rag/
 - [ ] Avaliação mensurável de groundedness e factualidade.
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
 - [x] Retry limitado e circuit breaker thread-safe para indisponibilidade transitória da OpenAI.
+- [x] Bulkheads independentes para limitar concorrência de embeddings e geração, com telemetria de saturação.
 - [ ] Métricas Prometheus, tracing distribuído e controle de acesso.
 - [ ] OCR e avaliação multimodal.
 
