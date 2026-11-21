@@ -81,6 +81,8 @@ def metrics_snapshot() -> dict:
         index = max(0, min(len(values) - 1, int((len(values) * quantile) + 0.999999) - 1))
         return round(values[index], 3)
 
+    from app.resilience import upstream_circuit_breaker
+
     return {
         "scope": "process_local",
         "request_count": request_count,
@@ -93,5 +95,6 @@ def metrics_snapshot() -> dict:
             "p99": percentile(durations, 0.99),
         },
         "upstream_retries": retry_metrics,
+        "upstream_circuit_breaker": upstream_circuit_breaker.snapshot(),
         "note": "Métricas em memória do processo; reiniciam com a aplicação e não substituem monitoramento distribuído.",
     }

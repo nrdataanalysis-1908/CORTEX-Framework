@@ -13,7 +13,11 @@ from app.observability import (
     record_retry_exhausted,
     record_retry_recovered,
 )
-from app.resilience import is_retryable_openai_error, retry_call
+from app.resilience import (
+    is_retryable_openai_error,
+    retry_call,
+    upstream_circuit_breaker,
+)
 
 # Application-level retry policy owns retries; disable hidden SDK retries to
 # prevent multiplicative attempts and make retry telemetry deterministic.
@@ -25,18 +29,21 @@ client = OpenAI(
 
 
 def _call_openai(operation: str, call):
-    return retry_call(
-        operation,
-        call,
-        max_retries=settings.openai_max_retries,
-        base_delay_seconds=settings.openai_retry_base_delay_seconds,
-        max_delay_seconds=settings.openai_retry_max_delay_seconds,
-        is_retryable=is_retryable_openai_error,
-        on_retry=record_retry_attempt,
-        on_recovered=record_retry_recovered,
-        on_exhausted=record_retry_exhausted,
-        on_permanent_failure=record_permanent_failure,
-    )
+    def execute_with_retry():
+        return retry_call(
+            operation,
+            call,
+            max_retries=settings.openai_max_retries,
+            base_delay_seconds=settings.openai_retry_base_delay_seconds,
+            max_delay_seconds=settings.openai_retry_max_delay_seconds,
+            is_retryable=is_retryable_openai_error,
+            on_retry=record_retry_attempt,
+            on_recovered=record_retry_recovered,
+            on_exhausted=record_retry_exhausted,
+            on_permanent_failure=record_permanent_failure,
+        )
+
+    return upstream_circuit_breaker.call(execute_with_retry, is_failure=is_retryable_openai_error)
 
 
 def extract_text(filename: str, data: bytes) -> str:
