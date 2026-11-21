@@ -14,8 +14,9 @@ def test_reciprocal_rank_uses_first_relevant_position():
 
 
 def test_ndcg_rewards_relevant_results_at_top():
-    assert normalized_dcg([True, False, True]) == pytest.approx(1.0)
-    assert normalized_dcg([False, True, True]) < 1.0
+    assert normalized_dcg([True, True, False]) == pytest.approx(1.0)
+    assert normalized_dcg([True, False, True]) < 1.0
+    assert normalized_dcg([False, True, True]) < normalized_dcg([True, False, True])
     assert normalized_dcg([False, False]) == 0.0
 
 
