@@ -79,3 +79,59 @@ def test_rate_limit_fails_closed_when_database_is_unavailable(monkeypatch):
 
     assert exc_info.value.status_code == 503
     assert exc_info.value.headers["Retry-After"] == "5"
+
+
+def test_rate_limit_is_atomic_across_concurrent_postgres_connections(monkeypatch):
+    """Exercise the UPSERT contention path against the real PostgreSQL service."""
+    from concurrent.futures import ThreadPoolExecutor
+    import hashlib
+
+    from app.db import connect, init_db
+
+    init_db()
+    api_key = "cortex-postgres-concurrency-test-key"
+    key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+    limit = 4
+
+    with connect() as conn:
+        conn.execute("DELETE FROM api_rate_limits WHERE key_hash = %s", (key_hash,))
+        initial_window = conn.execute(
+            "SELECT date_trunc('minute', NOW())"
+        ).fetchone()[0]
+
+    monkeypatch.setattr(rate_limit.settings, "api_access_token", api_key)
+    monkeypatch.setattr(rate_limit.settings, "api_rate_limit_requests_per_minute", limit)
+
+    def make_request():
+        try:
+            rate_limit.enforce_api_rate_limit(api_key)
+            return "allowed"
+        except HTTPException as exc:
+            if exc.status_code == 429:
+                return "limited"
+            raise
+
+    try:
+        with ThreadPoolExecutor(max_workers=12) as executor:
+            outcomes = list(executor.map(lambda _: make_request(), range(24)))
+
+        with connect() as conn:
+            row = conn.execute(
+                "SELECT window_start, request_count FROM api_rate_limits WHERE key_hash = %s",
+                (key_hash,),
+            ).fetchone()
+            final_window = conn.execute(
+                "SELECT date_trunc('minute', NOW())"
+            ).fetchone()[0]
+
+        # Avoid a false failure if this short concurrency test straddles a
+        # fixed-window boundary; window rollover is a separate behavior.
+        if initial_window != final_window or row[0] != initial_window:
+            pytest.skip("Concurrent requests crossed the fixed-window boundary.")
+
+        assert outcomes.count("allowed") == limit
+        assert outcomes.count("limited") == 24 - limit
+        assert row[1] == limit
+    finally:
+        with connect() as conn:
+            conn.execute("DELETE FROM api_rate_limits WHERE key_hash = %s", (key_hash,))
