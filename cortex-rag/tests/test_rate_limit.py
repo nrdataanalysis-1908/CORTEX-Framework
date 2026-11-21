@@ -136,3 +136,50 @@ def test_rate_limit_is_atomic_across_concurrent_postgres_connections(monkeypatch
     finally:
         with connect() as conn:
             conn.execute("DELETE FROM api_rate_limits WHERE key_hash = %s", (key_hash,))
+
+
+def test_rate_limit_resets_counter_when_postgres_window_rolls_over(monkeypatch):
+    """Verify a previous fixed window is reset atomically by the next request."""
+    import hashlib
+
+    from app.db import connect, init_db
+
+    init_db()
+    api_key = "cortex-rate-limit-window-rollover-test-key"
+    key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+    limit = 3
+
+    monkeypatch.setattr(rate_limit.settings, "api_access_token", api_key)
+    monkeypatch.setattr(rate_limit.settings, "api_rate_limit_requests_per_minute", limit)
+
+    try:
+        with connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO api_rate_limits (key_hash, window_start, request_count)
+                VALUES (%s, date_trunc('minute', NOW()) - INTERVAL '2 minutes', 99)
+                ON CONFLICT (key_hash) DO UPDATE
+                SET window_start = EXCLUDED.window_start,
+                    request_count = EXCLUDED.request_count
+                """,
+                (key_hash,),
+            )
+
+        assert rate_limit.enforce_api_rate_limit(api_key) is None
+
+        with connect() as conn:
+            row = conn.execute(
+                """
+                SELECT window_start, request_count,
+                       date_trunc('minute', NOW())
+                FROM api_rate_limits
+                WHERE key_hash = %s
+                """,
+                (key_hash,),
+            ).fetchone()
+
+        assert row[0] == row[2]
+        assert row[1] == 1
+    finally:
+        with connect() as conn:
+            conn.execute("DELETE FROM api_rate_limits WHERE key_hash = %s", (key_hash,))
