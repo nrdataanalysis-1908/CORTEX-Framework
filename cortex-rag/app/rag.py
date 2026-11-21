@@ -17,6 +17,8 @@ from app.resilience import (
     is_retryable_openai_error,
     retry_call,
     upstream_circuit_breaker,
+    embedding_bulkhead,
+    chat_bulkhead,
 )
 
 # Application-level retry policy owns retries; disable hidden SDK retries to
@@ -29,10 +31,16 @@ client = OpenAI(
 
 
 def _call_openai(operation: str, call):
+    bulkhead = embedding_bulkhead if operation.startswith("embeddings.") else chat_bulkhead
+
+    def execute_attempt():
+        # Acquire capacity only for the network attempt, never during retry backoff.
+        return bulkhead.call(call)
+
     def execute_with_retry():
         return retry_call(
             operation,
-            call,
+            execute_attempt,
             max_retries=settings.openai_max_retries,
             base_delay_seconds=settings.openai_retry_base_delay_seconds,
             max_delay_seconds=settings.openai_retry_max_delay_seconds,
