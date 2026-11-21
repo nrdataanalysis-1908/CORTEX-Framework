@@ -128,12 +128,24 @@ def metrics():
     return JSONResponse(metrics_snapshot())
 
 
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+
+
+async def _read_upload_limited(file: UploadFile) -> bytes:
+    """Reject known oversized multipart files before allocating their contents."""
+    if file.size is not None and file.size > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Arquivo excede o limite de 15 MB.")
+
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Arquivo excede o limite de 15 MB.")
+    return data
+
+
 @app.post("/documents", status_code=201, dependencies=[Depends(enforce_api_rate_limit)])
 async def upload_document(file: UploadFile = File(...)):
     try:
-        data = await file.read(15 * 1024 * 1024 + 1)
-        if len(data) > 15 * 1024 * 1024:
-            raise HTTPException(status_code=413, detail="Arquivo excede o limite de 15 MB.")
+        data = await _read_upload_limited(file)
         return ingest(file.filename or "", data, file.content_type)
     except CircuitOpenError as exc:
         raise _circuit_open_http_exception(exc) from exc
