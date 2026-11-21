@@ -88,7 +88,7 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ~~~
 
-Configure as variáveis em .env. Não versione chaves ou segredos.
+Configure as variáveis em .env. Defina `CORTEX_API_KEY` com um segredo aleatório de pelo menos 32 caracteres; gere um valor exclusivo por ambiente e não o versione. Não reutilize a chave de exemplo.
 
 ### Database
 
@@ -131,16 +131,16 @@ A execução de avaliação requer PostgreSQL ativo, documento previamente inger
 |---|---|---|
 | GET | /health | Liveness check |
 | GET | /ready | PostgreSQL readiness check |
-| GET | /metrics | Process-local request and latency metrics (JSON) |
-| POST | /documents | PDF/TXT ingestion |
-| POST | /ask | Contextual question answering |
+| GET | /metrics | Process-local request and latency metrics (JSON) — requer `X-API-Key` |
+| POST | /documents | PDF/TXT ingestion — requer `X-API-Key` |
+| POST | /ask | Contextual question answering — requer `X-API-Key` |
 
 As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito.
 
 ### Observability and reliability baseline
 
 
-`GET /metrics` apresenta contagem de requisições, erros HTTP 5xx e percentis p50/p95/p99 calculados sobre uma janela em memória de até 10.000 observações. Esses dados são locais ao processo, reiniciam com a aplicação e não devem ser tratados como telemetria distribuída ou SLO de produção. O endpoint ainda não possui autenticação e deve permanecer restrito à rede confiável até que o controle de acesso seja implementado.
+`GET /metrics` exige o cabeçalho `X-API-Key` e apresenta contagem de requisições, erros HTTP 5xx e percentis p50/p95/p99 calculados sobre uma janela em memória de até 10.000 observações. Esses dados são locais ao processo, reiniciam com a aplicação e não devem ser tratados como telemetria distribuída ou SLO de produção. Os endpoints `/documents`, `/ask` e `/metrics` exigem a chave de serviço configurada em `CORTEX_API_KEY`; `/health` e `/ready` permanecem públicos para probes de infraestrutura. A chave é comparada em tempo constante e nunca deve ser registrada em logs. Esta autenticação compartilhada não substitui autorização por usuário, rotação de segredos ou isolamento multi-tenant.
 
 O acesso à OpenAI é protegido por uma política de retry limitada e por um circuit breaker compartilhado entre as operações de embeddings e geração dentro do mesmo processo:
 
@@ -210,7 +210,7 @@ cortex-rag/
 ## 07 / Limitations and controls
 
 - PDFs escaneados não são processados; OCR não está incluído.
-- Não há autenticação, autorização ou isolamento entre usuários.
+- A autenticação atual usa uma chave de serviço compartilhada; autorização por usuário, rotação automatizada e isolamento multi-tenant ainda não estão implementados.
 - O limite de upload é de 15 MB.
 - Chunking utiliza janelas de caracteres, não segmentação semântica.
 - O limiar de similaridade é heurístico e requer calibração.
@@ -235,7 +235,8 @@ cortex-rag/
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
 - [x] Retry limitado e circuit breaker thread-safe para indisponibilidade transitória da OpenAI.
 - [x] Bulkheads independentes para limitar concorrência de embeddings e geração, com telemetria de saturação.
-- [ ] Métricas Prometheus, tracing distribuído e controle de acesso.
+- [x] Autenticação por chave de serviço nos endpoints operacionais e de métricas.
+- [ ] Métricas Prometheus, tracing distribuído, autorização por usuário e isolamento multi-tenant.
 - [ ] OCR e avaliação multimodal.
 
 ---
