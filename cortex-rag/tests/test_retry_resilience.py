@@ -266,3 +266,37 @@ def test_circuit_breaker_rejects_invalid_configuration():
         resilience.CircuitBreaker(failure_threshold=0)
     with pytest.raises(ValueError):
         resilience.CircuitBreaker(recovery_timeout_seconds=0)
+
+
+def test_circuit_breaker_ignores_permanent_upstream_errors():
+    breaker = resilience.CircuitBreaker(failure_threshold=1, recovery_timeout_seconds=10)
+
+    with pytest.raises(PermanentFailure):
+        breaker.call(
+            lambda: (_ for _ in ()).throw(PermanentFailure("invalid request")),
+            is_failure=_is_temporary,
+        )
+
+    snapshot = breaker.snapshot()
+    assert snapshot["state"] == resilience.CircuitBreaker.CLOSED
+    assert snapshot["consecutive_failures"] == 0
+
+
+def test_permanent_error_during_half_open_probe_confirms_upstream_reachable():
+    now = [0.0]
+    breaker = resilience.CircuitBreaker(
+        failure_threshold=1,
+        recovery_timeout_seconds=2,
+        clock=lambda: now[0],
+    )
+    with pytest.raises(TemporaryFailure):
+        breaker.call(lambda: (_ for _ in ()).throw(TemporaryFailure("down")))
+    now[0] = 2
+
+    with pytest.raises(PermanentFailure):
+        breaker.call(
+            lambda: (_ for _ in ()).throw(PermanentFailure("invalid request")),
+            is_failure=_is_temporary,
+        )
+
+    assert breaker.snapshot()["state"] == resilience.CircuitBreaker.CLOSED
