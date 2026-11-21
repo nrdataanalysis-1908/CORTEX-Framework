@@ -229,7 +229,8 @@ cortex-rag/
 - [x] Idempotência concorrente por hash com advisory lock transacional no PostgreSQL.
 - [x] Teste de integração concorrente contra PostgreSQL/pgvector no CI.
 - [x] Testes integrados de rollback e retry após falhas na geração de embeddings e persistência de chunks.
-- [x] Harness HTTP de carga concorrente com relatório de throughput, taxa de erro e latência p50/p95/p99.\n- [ ] Executar baseline controlado e investigar contenção de locks, throughput e latência p95/p99.
+- [x] Harness HTTP de carga concorrente com relatório de throughput, taxa de erro e latência p50/p95/p99.
+- [ ] Executar baseline controlado e investigar contenção de locks, throughput e latência p95/p99.
 - [ ] Avaliação mensurável de groundedness e factualidade.
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
 - [x] Retry limitado e circuit breaker thread-safe para indisponibilidade transitória da OpenAI.
