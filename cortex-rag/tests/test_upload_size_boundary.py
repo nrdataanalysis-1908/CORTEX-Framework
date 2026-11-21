@@ -1,5 +1,8 @@
 import asyncio
 
+import pytest
+from fastapi import HTTPException
+
 from app.main import MAX_UPLOAD_BYTES, _read_upload_limited
 
 
@@ -28,11 +31,8 @@ def test_upload_one_byte_over_15_mib_is_rejected():
     payload = b"x" * (MAX_UPLOAD_BYTES + 1)
     upload = FakeUpload(size=MAX_UPLOAD_BYTES + 1, payload=payload)
 
-    try:
+    with pytest.raises(HTTPException) as exc_info:
         asyncio.run(_read_upload_limited(upload))
-    except Exception as exc:
-        assert getattr(exc, "status_code", None) == 413
-    else:
-        raise AssertionError("Expected HTTP 413 for upload one byte over the limit")
 
+    assert exc_info.value.status_code == 413
     assert upload.read_calls == []
