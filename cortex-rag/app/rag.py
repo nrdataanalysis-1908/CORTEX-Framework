@@ -43,7 +43,7 @@ def _call_openai(operation: str, call):
             on_permanent_failure=record_permanent_failure,
         )
 
-    return upstream_circuit_breaker.call(execute_with_retry)
+    return upstream_circuit_breaker.call(execute_with_retry, is_failure=is_retryable_openai_error)
 
 
 def extract_text(filename: str, data: bytes) -> str:
