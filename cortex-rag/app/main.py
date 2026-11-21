@@ -6,15 +6,16 @@ from contextlib import asynccontextmanager
 from time import perf_counter
 
 import psycopg
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.db import check_database, init_db
 from app.observability import metrics_snapshot, record_request
 from app.rag import answer_question, ingest
+from app.rate_limit import enforce_api_rate_limit
 from app.resilience import BulkheadFullError, CircuitOpenError
-from app.security import require_api_key
 
 logger = logging.getLogger("cortex.startup")
 
@@ -51,7 +52,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title="CORTEX RAG API",
     description="RAG documental com FastAPI, PostgreSQL e pgvector.",
-    version="0.4.0",
+    version="0.5.0",
     lifespan=lifespan,
 )
 
@@ -111,12 +112,12 @@ def readiness():
     return {"status": "ready", "database": "available"}
 
 
-@app.get("/metrics", dependencies=[Depends(require_api_key)])
+@app.get("/metrics", dependencies=[Depends(enforce_api_rate_limit)])
 def metrics():
     return JSONResponse(metrics_snapshot())
 
 
-@app.post("/documents", status_code=201, dependencies=[Depends(require_api_key)])
+@app.post("/documents", status_code=201, dependencies=[Depends(enforce_api_rate_limit)])
 async def upload_document(file: UploadFile = File(...)):
     try:
         data = await file.read(15 * 1024 * 1024 + 1)
@@ -131,7 +132,7 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.post("/ask", dependencies=[Depends(require_api_key)])
+@app.post("/ask", dependencies=[Depends(enforce_api_rate_limit)])
 def ask(payload: QuestionRequest):
     try:
         return answer_question(payload.question)
