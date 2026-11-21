@@ -183,3 +183,52 @@ def test_rate_limit_resets_counter_when_postgres_window_rolls_over(monkeypatch):
     finally:
         with connect() as conn:
             conn.execute("DELETE FROM api_rate_limits WHERE key_hash = %s", (key_hash,))
+
+
+def test_rate_limit_retry_after_is_derived_from_postgres_window(monkeypatch):
+    """Verify the 429 response carries a positive retry delay for the current DB window."""
+    import hashlib
+
+    from app.db import connect, init_db
+
+    init_db()
+    api_key = "cortex-rate-limit-retry-after-test-key"
+    key_hash = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+    limit = 1
+
+    monkeypatch.setattr(rate_limit.settings, "api_access_token", api_key)
+    monkeypatch.setattr(rate_limit.settings, "api_rate_limit_requests_per_minute", limit)
+
+    try:
+        with connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO api_rate_limits (key_hash, window_start, request_count)
+                VALUES (%s, date_trunc('minute', NOW()), %s)
+                ON CONFLICT (key_hash) DO UPDATE
+                SET window_start = EXCLUDED.window_start,
+                    request_count = EXCLUDED.request_count
+                """,
+                (key_hash, limit),
+            )
+            expected_retry_after = conn.execute(
+                """
+                SELECT GREATEST(
+                    1,
+                    CEIL(EXTRACT(EPOCH FROM (
+                        date_trunc('minute', NOW()) + INTERVAL '1 minute' - NOW()
+                    )))::integer
+                )
+                """
+            ).fetchone()[0]
+
+        with pytest.raises(HTTPException) as exc_info:
+            rate_limit.enforce_api_rate_limit(api_key)
+
+        assert exc_info.value.status_code == 429
+        retry_after = int(exc_info.value.headers["Retry-After"])
+        assert 1 <= retry_after <= 60
+        assert abs(retry_after - expected_retry_after) <= 1
+    finally:
+        with connect() as conn:
+            conn.execute("DELETE FROM api_rate_limits WHERE key_hash = %s", (key_hash,))
