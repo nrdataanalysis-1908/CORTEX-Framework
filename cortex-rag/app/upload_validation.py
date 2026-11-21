@@ -28,17 +28,19 @@ def _safe_filename(filename: str) -> str:
 
 def _extract_pdf_text_bounded(reader: PdfReader) -> str:
     """Collect parser text callbacks without retaining more than the configured cap."""
-    parts: list[str] = []
+    page_texts: list[str] = []
     extracted_characters = 0
 
     for page in reader.pages:
+        page_parts: list[str] = []
+
         def collect_text(text, *_):
             nonlocal extracted_characters
             if not isinstance(text, str) or not text:
                 return
             if extracted_characters + len(text) > MAX_PDF_EXTRACTED_CHARACTERS:
                 raise _PdfTextLimitExceeded
-            parts.append(text)
+            page_parts.append(text)
             extracted_characters += len(text)
 
         try:
@@ -48,8 +50,9 @@ def _extract_pdf_text_bounded(reader: PdfReader) -> str:
                 "PDF excede o limite de "
                 f"{MAX_PDF_EXTRACTED_CHARACTERS:,} caracteres extraídos."
             ) from exc
+        page_texts.append("".join(page_parts))
 
-    return "\n".join(parts).strip()
+    return "\n".join(page_texts).strip()
 
 
 def extract_validated_text(
