@@ -242,7 +242,7 @@ cortex-rag/
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
 - [x] Retry limitado e circuit breaker thread-safe para indisponibilidade transitória da OpenAI.
 - [x] Bulkheads independentes para limitar concorrência de embeddings e geração, com telemetria de saturação.
-- [x] API Key compartilhada e rate limiting atômico por chave no PostgreSQL.
+- [x] API Key compartilhada e rate limiting atômico por chave no PostgreSQL. A suíte de integração também verifica a quota sob concorrência real entre conexões PostgreSQL.
 - [x] Validação de upload por extensão, MIME, assinatura, codificação, nome de arquivo e limite de páginas.
 - [ ] Métricas Prometheus e tracing distribuído.
 - [ ] OCR e avaliação multimodal.
