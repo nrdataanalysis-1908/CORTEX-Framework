@@ -97,16 +97,17 @@ class CircuitBreaker:
         self._failure_count = 0
         self._opened_at: float | None = None
         self._probe_in_flight = False
-        self._state_transitions = {"closed_to_open": 0, "open_to_half_open": 0, "half_open_to_closed": 0}
+        self._state_transitions = {"closed_to_open": 0, "open_to_half_open": 0, "half_open_to_open": 0, "half_open_to_closed": 0}
         self._rejected_calls = 0
         self._epoch = 0
 
-    def _open_locked(self, now: float) -> None:
+    def _open_locked(self, now: float, *, from_state: str) -> None:
         self._state = self.OPEN
         self._opened_at = now
         self._probe_in_flight = False
         self._epoch += 1
-        self._state_transitions["closed_to_open"] += 1
+        transition = "half_open_to_open" if from_state == self.HALF_OPEN else "closed_to_open"
+        self._state_transitions[transition] += 1
 
     def call(
         self,
@@ -143,7 +144,7 @@ class CircuitBreaker:
                 failed = is_failure(error)
                 if call_state == self.HALF_OPEN and self._state == self.HALF_OPEN and call_epoch == self._epoch:
                     if failed:
-                        self._open_locked(self._clock())
+                        self._open_locked(self._clock(), from_state=self.HALF_OPEN)
                     else:
                         # A permanent response (for example HTTP 400/401) proves
                         # the upstream is reachable; propagate it without keeping
@@ -152,7 +153,7 @@ class CircuitBreaker:
                 elif failed and call_state == self.CLOSED and self._state == self.CLOSED and call_epoch == self._epoch:
                     self._failure_count += 1
                     if self._failure_count >= self.failure_threshold:
-                        self._open_locked(self._clock())
+                        self._open_locked(self._clock(), from_state=self.CLOSED)
             raise
 
         with self._lock:
