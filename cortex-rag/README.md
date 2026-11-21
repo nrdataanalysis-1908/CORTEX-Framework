@@ -68,7 +68,7 @@ evidence_hit_rate_at_k = evidence_hits / total_questions
 
 A métrica não deve ser interpretada como acurácia da resposta, factualidade, groundedness ou ausência de alucinação. Essas dimensões exigem protocolo próprio e revisão qualitativa.
 
-Consulte [evaluation/README.md](evaluation/README.md) para os detalhes e critérios de execução.
+Consulte [evaluation/README.md](evaluation/README.md) para os detalhes e critérios de execução. Para medir latência e throughput sob concorrência controlada, consulte [evaluation/LOAD_TESTING.md](evaluation/LOAD_TESTING.md) e execute `python -m evaluation.load_test`.
 
 ## 04 / Local execution
 
@@ -229,7 +229,7 @@ cortex-rag/
 - [x] Idempotência concorrente por hash com advisory lock transacional no PostgreSQL.
 - [x] Teste de integração concorrente contra PostgreSQL/pgvector no CI.
 - [x] Testes integrados de rollback e retry após falhas na geração de embeddings e persistência de chunks.
-- [ ] Testes de carga para contenção de locks, throughput e latência p95/p99.
+- [x] Harness HTTP de carga concorrente com relatório de throughput, taxa de erro e latência p50/p95/p99.\n- [ ] Executar baseline controlado e investigar contenção de locks, throughput e latência p95/p99.
 - [ ] Avaliação mensurável de groundedness e factualidade.
 - [x] Instrumentação inicial de requisições, latência e logs JSON.
 - [x] Retry limitado e circuit breaker thread-safe para indisponibilidade transitória da OpenAI.
