@@ -300,3 +300,72 @@ def test_permanent_error_during_half_open_probe_confirms_upstream_reachable():
         )
 
     assert breaker.snapshot()["state"] == resilience.CircuitBreaker.CLOSED
+
+
+def test_bulkhead_rejects_when_capacity_is_exhausted_and_releases_slot():
+    import threading
+
+    bulkhead = resilience.Bulkhead("embeddings", max_concurrency=1)
+    entered = threading.Event()
+    release = threading.Event()
+    results = []
+
+    def slow_operation():
+        entered.set()
+        assert release.wait(timeout=2)
+        return "completed"
+
+    worker = threading.Thread(target=lambda: results.append(bulkhead.call(slow_operation)))
+    worker.start()
+    assert entered.wait(timeout=2)
+
+    with pytest.raises(resilience.BulkheadFullError) as exc_info:
+        bulkhead.call(lambda: "must not execute")
+
+    assert exc_info.value.operation == "embeddings"
+    assert bulkhead.snapshot() == {
+        "max_concurrency": 1,
+        "in_flight": 1,
+        "rejected_calls": 1,
+    }
+
+    release.set()
+    worker.join(timeout=2)
+    assert not worker.is_alive()
+    assert results == ["completed"]
+    assert bulkhead.snapshot()["in_flight"] == 0
+
+
+def test_bulkhead_releases_capacity_after_operation_failure():
+    bulkhead = resilience.Bulkhead("chat", max_concurrency=1)
+
+    with pytest.raises(PermanentFailure):
+        bulkhead.call(lambda: (_ for _ in ()).throw(PermanentFailure("failed")))
+
+    assert bulkhead.snapshot()["in_flight"] == 0
+    assert bulkhead.call(lambda: "capacity restored") == "capacity restored"
+
+
+def test_bulkhead_rejection_does_not_close_half_open_circuit():
+    now = [0.0]
+    breaker = resilience.CircuitBreaker(
+        failure_threshold=1,
+        recovery_timeout_seconds=2,
+        clock=lambda: now[0],
+    )
+    with pytest.raises(TemporaryFailure):
+        breaker.call(lambda: (_ for _ in ()).throw(TemporaryFailure("upstream down")))
+    now[0] = 2.0
+
+    with pytest.raises(resilience.BulkheadFullError):
+        breaker.call(
+            lambda: (_ for _ in ()).throw(resilience.BulkheadFullError("chat", 1)),
+            is_failure=_is_temporary,
+            is_ignored=lambda error: isinstance(error, resilience.BulkheadFullError),
+        )
+
+    snapshot = breaker.snapshot()
+    assert snapshot["state"] == resilience.CircuitBreaker.HALF_OPEN
+    assert snapshot["half_open_probe_in_flight"] is False
+    assert breaker.call(lambda: "upstream recovered") == "upstream recovered"
+    assert breaker.snapshot()["state"] == resilience.CircuitBreaker.CLOSED
