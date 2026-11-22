@@ -13,6 +13,12 @@ ALLOWED_CONTENT_TYPES = {
 }
 
 
+class _ExtractedTextLimitExceeded(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(message)
+
+
 def _safe_filename(filename: str) -> str:
     if not filename or "\x00" in filename:
         raise ValueError("Nome de arquivo inválido.")
@@ -21,6 +27,44 @@ def _safe_filename(filename: str) -> str:
     if not name or name in {".", ".."} or len(name) > MAX_FILENAME_LENGTH:
         raise ValueError("Nome de arquivo inválido ou excede 255 caracteres.")
     return name
+
+
+def _extract_pdf_text_bounded(reader: PdfReader) -> str:
+    """Accumulate pypdf text fragments only while per-page and total caps allow."""
+    extracted_pages: list[str] = []
+    total_chars = 0
+
+    for page_number, page in enumerate(reader.pages, start=1):
+        page_parts: list[str] = []
+        page_chars = 0
+
+        def collect_text(text, *_):
+            nonlocal page_chars, total_chars
+            if not isinstance(text, str) or not text:
+                return
+            fragment_chars = len(text)
+            if page_chars + fragment_chars > MAX_PDF_PAGE_TEXT_CHARS:
+                raise _ExtractedTextLimitExceeded(
+                    f"Página {page_number} excede o limite de "
+                    f"{MAX_PDF_PAGE_TEXT_CHARS} caracteres extraídos."
+                )
+            if total_chars + fragment_chars > MAX_EXTRACTED_TEXT_CHARS:
+                raise _ExtractedTextLimitExceeded(
+                    "Texto extraído excede o limite de "
+                    f"{MAX_EXTRACTED_TEXT_CHARS} caracteres."
+                )
+            page_parts.append(text)
+            page_chars += fragment_chars
+            total_chars += fragment_chars
+
+        try:
+            page.extract_text(visitor_text=collect_text)
+        except _ExtractedTextLimitExceeded as exc:
+            raise ValueError(exc.message) from exc
+
+        extracted_pages.append("".join(page_parts))
+
+    return "\n".join(extracted_pages).strip()
 
 
 def extract_validated_text(
@@ -65,25 +109,7 @@ def extract_validated_text(
             raise ValueError("PDF protegido por senha não é aceito.")
         if len(reader.pages) > MAX_PDF_PAGES:
             raise ValueError(f"PDF excede o limite de {MAX_PDF_PAGES} páginas.")
-
-        extracted_pages: list[str] = []
-        total_chars = 0
-        for page_number, page in enumerate(reader.pages, start=1):
-            page_text = page.extract_text() or ""
-            page_chars = len(page_text)
-            if page_chars > MAX_PDF_PAGE_TEXT_CHARS:
-                raise ValueError(
-                    f"Página {page_number} excede o limite de "
-                    f"{MAX_PDF_PAGE_TEXT_CHARS} caracteres extraídos."
-                )
-            total_chars += page_chars
-            if total_chars > MAX_EXTRACTED_TEXT_CHARS:
-                raise ValueError(
-                    f"Texto extraído excede o limite de {MAX_EXTRACTED_TEXT_CHARS} caracteres."
-                )
-            if page_text:
-                extracted_pages.append(page_text)
-        text = "\n".join(extracted_pages).strip()
+        text = _extract_pdf_text_bounded(reader)
     except ValueError:
         raise
     except Exception as exc:
