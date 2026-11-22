@@ -124,8 +124,8 @@ def test_pdf_per_page_extracted_text_limit_is_enforced(monkeypatch):
     from app import upload_validation
 
     class FakePage:
-        def extract_text(self):
-            return "x" * (upload_validation.MAX_PDF_PAGE_TEXT_CHARS + 1)
+        def extract_text(self, visitor_text):
+            visitor_text("x" * (upload_validation.MAX_PDF_PAGE_TEXT_CHARS + 1), None, None, None, None)
 
     class FakePages:
         def __len__(self):
@@ -151,8 +151,8 @@ def test_pdf_total_extracted_text_limit_is_enforced(monkeypatch):
     page_text = "x" * upload_validation.MAX_PDF_PAGE_TEXT_CHARS
 
     class FakePage:
-        def extract_text(self):
-            return page_text
+        def extract_text(self, visitor_text):
+            visitor_text(page_text, None, None, None, None)
 
     class FakePages:
         def __len__(self):
