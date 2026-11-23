@@ -38,3 +38,12 @@ existing API-key dependency.
 This is the first custom Studio surface for trace inspection. It is not yet a
 LangGraph graph editor, run replay interface, evaluation workbench, or
 multi-tenant authorization layer.
+
+
+## Span hierarchy
+
+The trace detail response preserves chronological ordering and adds a bounded
+`depth` derived from each span's `parent_span_id`. The UI uses this metadata to
+indent child spans and display their parent relationship. Missing parents are
+shown as roots; cyclic parent references are flattened to depth zero. The
+depth is capped at 32 and does not expose span attributes, events, or payloads.
