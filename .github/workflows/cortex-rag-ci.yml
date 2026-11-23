@@ -83,3 +83,26 @@ jobs:
           python -m pip install -r requirements.txt
       - name: Test Windows Job Object isolation
         run: python -m pytest tests/test_pdf_isolation.py -q
+
+  container-image:
+    name: Hardened Docker image
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cortex-rag
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        env:
+          POSTGRES_PASSWORD: ci_url_safe_password_123456789
+          OPENAI_API_KEY: sk-test-placeholder
+          API_ACCESS_TOKEN: ci_test_token_with_more_than_32_characters
+        run: docker compose config --quiet
+      - name: Build API image
+        run: docker build --tag cortex-rag:ci .
+      - name: Verify non-root image user
+        shell: bash
+        run: |
+          image_user="$(docker image inspect --format '{{.Config.User}}' cortex-rag:ci)"
+          test "$image_user" = "cortex:cortex"
