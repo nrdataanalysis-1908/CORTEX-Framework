@@ -197,7 +197,27 @@ Exemplo de requisição:
 }
 ~~~
 
-## 06 / Repository map
+## 06 / Distributed tracing foundation
+
+A API possui instrumentação OpenTelemetry para spans HTTP do FastAPI, chamadas
+HTTPX e operações PostgreSQL via Psycopg. A exportação é opcional e depende de
+um collector OTLP externo:
+
+~~~dotenv
+OTEL_SERVICE_NAME=cortex-rag
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+~~~
+
+Sem endpoint OTLP, os spans não são exportados nem persistidos. Esta etapa não
+inclui ainda armazenamento consultável, interface Studio, replay ou captura de
+execuções LangGraph. O contrato e as próximas etapas estão em
+[Trace Engine Foundation](../docs/studio/TRACE_ENGINE.md).
+
+A instrumentação não deve coletar prompts, conteúdo documental, corpos HTTP ou
+segredos. Atributos operacionais devem ser limitados e submetidos a política de
+redação antes de qualquer expansão da telemetria.
+
+## 07 / Repository map
 
 ~~~text
 cortex-rag/
@@ -227,7 +247,7 @@ cortex-rag/
 └── requirements.txt
 ~~~
 
-## 07 / Limitations and controls
+## 08 / Limitations and controls
 
 - PDFs escaneados não são processados; OCR não está incluído.
 - Uploads são limitados a 15 MB e 500 páginas por PDF; arquivos criptografados são rejeitados.
@@ -238,7 +258,7 @@ cortex-rag/
 - O corpus de teste é sintético; não utilizar documentos pessoais ou confidenciais.
 - Segredos devem permanecer em variáveis de ambiente e nunca ser versionados.
 
-## 08 / Engineering roadmap
+## 09 / Engineering roadmap
 
 - [x] Ingestão PDF/TXT e persistência vetorial inicial.
 - [x] Chunking isolado e testes unitários.
@@ -257,7 +277,7 @@ cortex-rag/
 - [x] Bulkheads independentes para limitar concorrência de embeddings e geração, com telemetria de saturação.
 - [x] API Key compartilhada e rate limiting atômico por chave no PostgreSQL. A suíte de integração também verifica a quota sob concorrência real entre conexões PostgreSQL.
 - [x] Validação de upload por extensão, MIME, assinatura, codificação, nome de arquivo e limite de páginas.
-- [ ] Métricas Prometheus e tracing distribuído.
+- [ ] Métricas Prometheus e backend de traces consultável para o CORTEX Studio.\n- [x] Instrumentação OpenTelemetry inicial com exportação OTLP opcional.
 - [ ] OCR e avaliação multimodal.
 - [x] Extração PDF em worker separado com timeout e limites de recursos para Linux e Windows.
 - [x] Imagem Docker da API com usuário não privilegiado e perfil Compose com filesystem somente leitura e limites de recursos.
