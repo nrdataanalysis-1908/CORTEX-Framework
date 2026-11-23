@@ -17,6 +17,7 @@ from app.rag import answer_question, ingest
 from app.rate_limit import enforce_api_rate_limit
 from app.request_limits import RequestBodyLimitMiddleware
 from app.resilience import BulkheadFullError, CircuitOpenError
+from app.pdf_isolation import PdfWorkerExecutionError, PdfWorkerTimeoutError
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 # Allow bounded multipart framing/metadata in addition to the 15 MiB file payload.
@@ -159,6 +160,10 @@ async def upload_document(file: UploadFile = File(...)):
         raise _circuit_open_http_exception(exc) from exc
     except BulkheadFullError as exc:
         raise _bulkhead_full_http_exception(exc) from exc
+    except PdfWorkerTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
+    except PdfWorkerExecutionError as exc:
+        raise HTTPException(status_code=503, detail="Worker de extração PDF indisponível ou sem isolamento.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
