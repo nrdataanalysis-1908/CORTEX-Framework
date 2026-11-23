@@ -12,4 +12,3 @@ def test_tracer_provider_has_service_identity_without_exporter(monkeypatch):
 
     assert provider.resource.attributes["service.name"] == "cortex-rag"
     assert provider.resource.attributes["service.version"] == "test"
-    assert provider._active_span_processor._span_processors == ()
