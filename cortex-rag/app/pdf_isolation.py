@@ -117,13 +117,16 @@ def _run_pdf_worker(filename: str, data: bytes, content_type: str | None) -> tup
         raise ValueError("Metadados do arquivo excedem o limite permitido.")
     payload = metadata + b"\n" + data
 
-    process = subprocess.Popen(
-        [sys.executable, "-m", "app.pdf_worker"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=os.path.dirname(os.path.dirname(__file__)),
-    )
+    try:
+        process = subprocess.Popen(
+            [sys.executable, "-m", "app.pdf_worker"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=os.path.dirname(os.path.dirname(__file__)),
+        )
+    except OSError as exc:
+        raise PdfWorkerExecutionError("Não foi possível iniciar o processo isolado de PDF.") from exc
     job_handle = None
     close_job = None
     try:
