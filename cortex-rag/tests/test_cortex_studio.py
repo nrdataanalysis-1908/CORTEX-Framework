@@ -98,3 +98,12 @@ def test_studio_maps_tempo_failure_to_service_unavailable(monkeypatch):
         "/studio/traces", headers={"X-API-Key": API_KEY}
     )
     assert response.status_code == 503
+
+
+def test_studio_ui_is_served_without_exposing_trace_data():
+    response = TestClient(app).get("/studio/ui")
+    assert response.status_code == 200
+    assert "CORTEX Studio" in response.text
+    assert "X-API-Key" in response.text
+    assert "/studio/traces" in response.text
+    assert "localStorage" not in response.text
