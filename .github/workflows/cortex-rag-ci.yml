@@ -118,14 +118,19 @@ jobs:
           docker compose up -d tempo otel-collector grafana
           for endpoint in http://127.0.0.1:3200/ready http://127.0.0.1:13133/ http://127.0.0.1:3000/api/health; do
             ready=0
-            for attempt in $(seq 1 45); do
-              if curl --fail --silent "$endpoint" >/dev/null; then
+            for attempt in $(seq 1 90); do
+              if curl --fail --silent --show-error "$endpoint" >/dev/null; then
                 ready=1
                 break
               fi
               sleep 2
             done
-            test "$ready" = 1
+            if [ "$ready" != 1 ]; then
+              echo "::error::Telemetry readiness check failed: $endpoint"
+              docker compose ps --all
+              docker compose logs --no-color --tail=200 tempo otel-collector grafana
+              exit 1
+            fi
           done
       - name: Stop telemetry services
         if: always()
