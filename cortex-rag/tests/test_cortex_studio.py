@@ -78,6 +78,8 @@ def test_studio_trace_detail_flattens_spans_without_attributes(monkeypatch):
     span = body["spans"][0]
     assert span["service_name"] == "cortex-rag"
     assert span["duration_ms"] == 5
+    assert span["depth"] == 0
+    assert span["parent_span_id"] is None
     assert "attributes" not in span
     assert "private" not in response.text
 
@@ -107,3 +109,26 @@ def test_studio_ui_is_served_without_exposing_trace_data():
     assert "X-API-Key" in response.text
     assert "/studio/traces" in response.text
     assert "localStorage" not in response.text
+
+
+def test_studio_span_depth_tracks_parent_hierarchy_and_breaks_cycles():
+    spans = [
+        {"span_id": "root", "parent_span_id": None},
+        {"span_id": "child", "parent_span_id": "root"},
+        {"span_id": "grandchild", "parent_span_id": "child"},
+        {"span_id": "cycle-a", "parent_span_id": "cycle-b"},
+        {"span_id": "cycle-b", "parent_span_id": "cycle-a"},
+        {"span_id": "orphan", "parent_span_id": "missing"},
+    ]
+
+    result = studio._add_span_depths(spans)
+
+    assert [item["depth"] for item in result] == [0, 1, 2, 0, 0, 0]
+
+
+def test_studio_ui_renders_span_hierarchy():
+    response = TestClient(app).get("/studio/ui")
+    assert response.status_code == 200
+    assert "parent_span_id" in response.text
+    assert "s.depth" in response.text
+    assert "Hierarquia por parent span" in response.text
