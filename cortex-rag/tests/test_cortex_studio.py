@@ -132,3 +132,12 @@ def test_studio_ui_renders_span_hierarchy():
     assert "parent_span_id" in response.text
     assert "s.depth" in response.text
     assert "Hierarquia por parent span" in response.text
+
+
+def test_studio_ui_exposes_client_side_trace_filters():
+    response = TestClient(app).get("/studio/ui")
+    assert response.status_code == 200
+    assert 'id="traceSearch"' in response.text
+    assert 'id="statusFilter"' in response.text
+    assert "Nenhuma execução corresponde aos filtros." in response.text
+    assert "t.root_trace_name,t.root_service_name,t.trace_id" in response.text
