@@ -24,7 +24,7 @@ def test_pdf_worker_runs_in_separate_process_and_returns_validation_error():
         )
 
 
-def _make_text_pdf(text: str = "CORTEX validation text") -> bytes:
+def _make_text_pdf(text: str = "isolated worker extraction") -> bytes:
     """Build a minimal standards-compliant PDF containing an extractable text run."""
     escaped = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
     stream = f"BT /F1 12 Tf 72 720 Td ({escaped}) Tj ET".encode("ascii")
