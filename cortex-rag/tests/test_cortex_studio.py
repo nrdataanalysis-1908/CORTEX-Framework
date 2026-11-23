@@ -113,26 +113,22 @@ def test_studio_ui_is_served_without_exposing_trace_data():
 
 def test_studio_span_depth_tracks_parent_hierarchy_and_breaks_cycles():
     spans = [
-        {"span_id": "root", "parent_span_id": None, "start_time_unix_nano": "1"},
-        {"span_id": "child", "parent_span_id": "root", "start_time_unix_nano": "2"},
-        {"span_id": "grandchild", "parent_span_id": "child", "start_time_unix_nano": "3"},
-        {"span_id": "cycle-a", "parent_span_id": "cycle-b", "start_time_unix_nano": "4"},
-        {"span_id": "cycle-b", "parent_span_id": "cycle-a", "start_time_unix_nano": "5"},
-        {"span_id": "orphan", "parent_span_id": "missing", "start_time_unix_nano": "6"},
+        {"span_id": "root", "parent_span_id": None},
+        {"span_id": "child", "parent_span_id": "root"},
+        {"span_id": "grandchild", "parent_span_id": "child"},
+        {"span_id": "cycle-a", "parent_span_id": "cycle-b"},
+        {"span_id": "cycle-b", "parent_span_id": "cycle-a"},
+        {"span_id": "orphan", "parent_span_id": "missing"},
     ]
 
-    by_id = {item["span_id"]: item["parent_span_id"] for item in spans}
-    for item in spans:
-        current = item.get("parent_span_id")
-        visited = {item.get("span_id")}
-        depth = 0
-        while isinstance(current, str) and current in by_id:
-            if current in visited:
-                depth = 0
-                break
-            visited.add(current)
-            depth += 1
-            current = by_id[current]
-        item["depth"] = min(depth, 32)
+    result = studio._add_span_depths(spans)
 
-    assert [item["depth"] for item in spans] == [0, 1, 2, 0, 0, 0]
+    assert [item["depth"] for item in result] == [0, 1, 2, 0, 0, 0]
+
+
+def test_studio_ui_renders_span_hierarchy():
+    response = TestClient(app).get("/studio/ui")
+    assert response.status_code == 200
+    assert "parent_span_id" in response.text
+    assert "s.depth" in response.text
+    assert "Hierarquia por parent span" in response.text
