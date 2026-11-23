@@ -208,9 +208,10 @@ OTEL_SERVICE_NAME=cortex-rag
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
 ~~~
 
-Sem endpoint OTLP, os spans não são exportados nem persistidos. Esta etapa não
-inclui ainda armazenamento consultável, interface Studio, replay ou captura de
-execuções LangGraph. O contrato e as próximas etapas estão em
+Em execução direta da API, sem endpoint OTLP configurado, os spans não são
+exportados nem persistidos. No perfil Docker Compose, a API envia traces ao
+Collector, que os encaminha ao Tempo. Esta etapa ainda não inclui interface
+Studio própria, replay ou captura de grafos LangGraph. Consulte
 [Trace Engine Foundation](../docs/studio/TRACE_ENGINE.md).
 
 A instrumentação não deve coletar prompts, conteúdo documental, corpos HTTP ou
