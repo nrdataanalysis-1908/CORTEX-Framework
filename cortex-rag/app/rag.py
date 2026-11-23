@@ -10,7 +10,7 @@ from app.observability import (
     record_retry_exhausted,
     record_retry_recovered,
 )
-from app.upload_validation import extract_validated_text
+from app.pdf_isolation import extract_validated_text_isolated
 from app.resilience import (
     is_retryable_openai_error,
     BulkheadFullError,
@@ -58,7 +58,7 @@ def _call_openai(operation: str, call):
 
 
 def extract_text(filename: str, data: bytes, content_type: str | None = None) -> str:
-    text, _ = extract_validated_text(filename, data, content_type)
+    text, _ = extract_validated_text_isolated(filename, data, content_type)
     return text
 
 
@@ -75,7 +75,7 @@ def embed(texts: list[str]) -> list[list[float]]:
 
 
 def ingest(filename: str, data: bytes, content_type: str | None = None) -> dict:
-    text, safe_filename = extract_validated_text(filename, data, content_type)
+    text, safe_filename = extract_validated_text_isolated(filename, data, content_type)
     chunks = split_text(text, settings.chunk_size, settings.chunk_overlap)
     if not chunks:
         raise ValueError("Nenhum texto extraível foi encontrado no arquivo.")
