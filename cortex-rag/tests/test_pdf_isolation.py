@@ -100,7 +100,7 @@ def test_worker_timeout_kills_child(monkeypatch):
     child = FakeProcess()
     monkeypatch.setattr(pdf_isolation.subprocess, "Popen", lambda *a, **k: child)
     monkeypatch.setattr(pdf_isolation, "PDF_WORKER_WALL_SECONDS", 1)
-    monkeypatch.setattr(pdf_isolation.os, "name", "posix")
+    monkeypatch.setattr(pdf_isolation, "_windows_job", lambda process: (None, None))
 
     with pytest.raises(pdf_isolation.PdfWorkerTimeoutError):
         pdf_isolation._run_pdf_worker("x.pdf", b"%PDF-", "application/pdf")
