@@ -1,7 +1,6 @@
 """OpenTelemetry bootstrap for CORTEX API tracing.
 
-Export is opt-in: without OTEL_EXPORTER_OTLP_ENDPOINT, spans are created by
-the SDK but are not sent to an external collector.
+Export is opt-in: without an OTLP endpoint, spans are not sent externally.
 """
 import os
 
@@ -16,8 +15,11 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 
-def configure_tracing(app: FastAPI) -> None:
-    """Configure framework and database spans, exporting only when OTLP is set."""
+def build_tracer_provider(
+    app: FastAPI,
+    endpoint: str | None = None,
+) -> TracerProvider:
+    """Build a provider with bounded service identity and optional OTLP export."""
     provider = TracerProvider(
         resource=Resource.create(
             {
@@ -26,18 +28,23 @@ def configure_tracing(app: FastAPI) -> None:
             }
         )
     )
-    endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or os.getenv(
-        "OTEL_EXPORTER_OTLP_ENDPOINT"
-    )
-    if endpoint:
-        if endpoint.rstrip("/").endswith("/v1/traces"):
-            exporter = OTLPSpanExporter(endpoint=endpoint)
+    export_endpoint = endpoint or os.getenv(
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"
+    ) or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if export_endpoint:
+        if export_endpoint.rstrip("/").endswith("/v1/traces"):
+            resolved_endpoint = export_endpoint
         else:
-            exporter = OTLPSpanExporter(endpoint=f"{endpoint.rstrip('/')}/v1/traces")
-        provider.add_span_processor(BatchSpanProcessor(exporter))
+            resolved_endpoint = f"{export_endpoint.rstrip('/')}/v1/traces"
+        provider.add_span_processor(
+            BatchSpanProcessor(OTLPSpanExporter(endpoint=resolved_endpoint))
+        )
+    return provider
 
-    # A single provider must be installed before instrumentors create spans.
-    trace.set_tracer_provider(provider)
+
+def configure_tracing(app: FastAPI) -> None:
+    """Configure framework and database spans, exporting only when OTLP is set."""
+    trace.set_tracer_provider(build_tracer_provider(app))
     FastAPIInstrumentor.instrument_app(app)
     HTTPXClientInstrumentor().instrument()
     PsycopgInstrumentor().instrument()
