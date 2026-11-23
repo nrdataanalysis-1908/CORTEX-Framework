@@ -108,6 +108,28 @@ jobs:
           API_ACCESS_TOKEN: ci_test_token_with_more_than_32_characters
           GRAFANA_ADMIN_PASSWORD: ci_grafana_password_for_validation_only
         run: docker compose config --quiet
+      - name: Smoke test telemetry services
+        env:
+          POSTGRES_PASSWORD: ci_url_safe_password_123456789
+          OPENAI_API_KEY: sk-test-placeholder
+          API_ACCESS_TOKEN: ci_test_token_with_more_than_32_characters
+          GRAFANA_ADMIN_PASSWORD: ci_grafana_password_for_validation_only
+        run: |
+          docker compose up -d tempo otel-collector grafana
+          for endpoint in http://127.0.0.1:3200/ready http://127.0.0.1:13133/ http://127.0.0.1:3000/api/health; do
+            ready=0
+            for attempt in $(seq 1 45); do
+              if curl --fail --silent "$endpoint" >/dev/null; then
+                ready=1
+                break
+              fi
+              sleep 2
+            done
+            test "$ready" = 1
+          done
+      - name: Stop telemetry services
+        if: always()
+        run: docker compose down -v
       - name: Build API image
         run: docker build --tag cortex-rag:ci .
       - name: Verify non-root image user
