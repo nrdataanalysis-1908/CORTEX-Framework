@@ -19,6 +19,7 @@ from app.rate_limit import enforce_api_rate_limit
 from app.request_limits import RequestBodyLimitMiddleware
 from app.resilience import BulkheadFullError, CircuitOpenError
 from app.pdf_isolation import PdfWorkerExecutionError, PdfWorkerTimeoutError
+from app.tracing import configure_tracing
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 # Allow bounded multipart framing/metadata in addition to the 15 MiB file payload.
@@ -67,6 +68,7 @@ app.add_middleware(
     max_body_bytes=MAX_REQUEST_BODY_BYTES,
     protected_path="/documents",
 )
+configure_tracing(app)
 
 
 def _resolve_request_id(candidate: str | None) -> str:
