@@ -14,8 +14,8 @@ After starting the Compose stack:
 
 - Grafana: http://localhost:3000
 - Grafana Explore: select the `CORTEX Tempo` data source and query traces.
-- Tempo HTTP API remains internal to the Compose network.
-- Collector OTLP/HTTP receiver remains internal to the Compose network.
+- Tempo HTTP API is exposed on localhost only at `http://localhost:3200` for readiness and local diagnostics.
+- Collector OTLP/HTTP receiver remains internal to the Compose network; its health endpoint is bound to localhost at `http://localhost:13133`.
 
 Grafana is bound to 127.0.0.1 by default. Set a unique
 `GRAFANA_ADMIN_PASSWORD` in the untracked `.env` file. Do not expose Grafana,
