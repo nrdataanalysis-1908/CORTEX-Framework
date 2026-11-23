@@ -27,6 +27,7 @@ services:
       API_ACCESS_TOKEN: ${API_ACCESS_TOKEN:?Set API_ACCESS_TOKEN in .env}
       OTEL_SERVICE_NAME: cortex-rag
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      CORTEX_TEMPO_URL: http://tempo:3200
     ports:
       - "${CORTEX_API_PORT:-8000}:8000"
     depends_on:
