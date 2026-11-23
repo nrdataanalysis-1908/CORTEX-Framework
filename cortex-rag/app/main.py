@@ -9,6 +9,7 @@ import psycopg
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi import Depends
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from app.db import check_database, init_db
@@ -155,7 +156,7 @@ async def _read_upload_limited(file: UploadFile) -> bytes:
 async def upload_document(file: UploadFile = File(...)):
     try:
         data = await _read_upload_limited(file)
-        return ingest(file.filename or "", data, file.content_type)
+        return await run_in_threadpool(ingest, file.filename or "", data, file.content_type)
     except CircuitOpenError as exc:
         raise _circuit_open_http_exception(exc) from exc
     except BulkheadFullError as exc:
