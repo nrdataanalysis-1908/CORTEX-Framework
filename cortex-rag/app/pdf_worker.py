@@ -24,6 +24,8 @@ def _apply_posix_limits() -> None:
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     try:
         _apply_posix_limits()
         header = sys.stdin.buffer.readline(8193)
