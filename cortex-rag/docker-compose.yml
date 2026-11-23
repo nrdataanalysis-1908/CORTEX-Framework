@@ -25,6 +25,8 @@ services:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/cortex
       OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in .env}
       API_ACCESS_TOKEN: ${API_ACCESS_TOKEN:?Set API_ACCESS_TOKEN in .env}
+      OTEL_SERVICE_NAME: cortex-rag
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     ports:
       - "${CORTEX_API_PORT:-8000}:8000"
     depends_on:
@@ -53,5 +55,53 @@ services:
       start_period: 15s
       retries: 3
 
+
+  tempo:
+    image: grafana/tempo:3.0.0
+    command: ["-target=all", "-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./observability/tempo.yaml:/etc/tempo.yaml:ro
+      - cortex_tempo_data:/var/tempo
+    ports:
+      - "127.0.0.1:3200:3200"
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 128
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.165.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:13133:13133"
+    depends_on:
+      - tempo
+    mem_limit: 384m
+    cpus: 0.5
+    pids_limit: 64
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - cortex_grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - tempo
+    mem_limit: 512m
+    cpus: 0.75
+    pids_limit: 128
+    restart: unless-stopped
+
 volumes:
   cortex_pgdata:
+  cortex_tempo_data:
+  cortex_grafana_data:

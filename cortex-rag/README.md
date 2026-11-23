@@ -208,14 +208,29 @@ OTEL_SERVICE_NAME=cortex-rag
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
 ~~~
 
-Sem endpoint OTLP, os spans não são exportados nem persistidos. Esta etapa não
-inclui ainda armazenamento consultável, interface Studio, replay ou captura de
-execuções LangGraph. O contrato e as próximas etapas estão em
+Em execução direta da API, sem endpoint OTLP configurado, os spans não são
+exportados nem persistidos. No perfil Docker Compose, a API envia traces ao
+Collector, que os encaminha ao Tempo. Esta etapa ainda não inclui interface
+Studio própria, replay ou captura de grafos LangGraph. Consulte
 [Trace Engine Foundation](../docs/studio/TRACE_ENGINE.md).
 
 A instrumentação não deve coletar prompts, conteúdo documental, corpos HTTP ou
 segredos. Atributos operacionais devem ser limitados e submetidos a política de
 redação antes de qualquer expansão da telemetria.
+
+## Local trace backend
+
+The Compose stack includes an OpenTelemetry Collector, Grafana Tempo, and
+Grafana. API spans are forwarded internally to the Collector, batched, and
+stored on the persistent `cortex_tempo_data` volume. Grafana is available at
+`http://localhost:3000`; use Explore with the provisioned `CORTEX Tempo`
+data source. Configure a unique `GRAFANA_ADMIN_PASSWORD` in `.env`.
+
+The local Tempo profile retains trace blocks for 72 hours and is intended for
+development/evaluation on one host. Production deployments should use object
+storage, controlled network exposure, authentication, backups, and an explicit
+retention policy. See [Trace Backend](../docs/studio/TRACE_BACKEND.md).
+
 
 ## 07 / Repository map
 
@@ -277,8 +292,8 @@ cortex-rag/
 - [x] Bulkheads independentes para limitar concorrência de embeddings e geração, com telemetria de saturação.
 - [x] API Key compartilhada e rate limiting atômico por chave no PostgreSQL. A suíte de integração também verifica a quota sob concorrência real entre conexões PostgreSQL.
 - [x] Validação de upload por extensão, MIME, assinatura, codificação, nome de arquivo e limite de páginas.
-- [ ] Métricas Prometheus e backend de traces consultável para o CORTEX Studio.
-- [x] Instrumentação OpenTelemetry inicial com exportação OTLP opcional.
+- [x] Backend local de traces com OpenTelemetry Collector, Tempo e Grafana Explore.
+- [x] Instrumentação OpenTelemetry inicial com exportação OTLP.
 - [ ] OCR e avaliação multimodal.
 - [x] Extração PDF em worker separado com timeout e limites de recursos para Linux e Windows.
 - [x] Imagem Docker da API com usuário não privilegiado e perfil Compose com filesystem somente leitura e limites de recursos.

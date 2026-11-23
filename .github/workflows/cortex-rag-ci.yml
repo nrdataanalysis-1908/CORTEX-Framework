@@ -98,14 +98,43 @@ jobs:
           POSTGRES_PASSWORD: ci_url_safe_password_123456789
           OPENAI_API_KEY: sk-test-placeholder
           API_ACCESS_TOKEN: ci_test_token_with_more_than_32_characters
+          GRAFANA_ADMIN_PASSWORD: ci_grafana_password_for_validation_only
         run: |
-          printf 'POSTGRES_PASSWORD=%s\nOPENAI_API_KEY=%s\nAPI_ACCESS_TOKEN=%s\nDATABASE_URL=postgresql://postgres:postgres@localhost:5432/cortex\n' "$POSTGRES_PASSWORD" "$OPENAI_API_KEY" "$API_ACCESS_TOKEN" > .env
+          printf 'POSTGRES_PASSWORD=%s\nOPENAI_API_KEY=%s\nAPI_ACCESS_TOKEN=%s\nGRAFANA_ADMIN_PASSWORD=%s\nDATABASE_URL=postgresql://postgres:postgres@localhost:5432/cortex\n' "$POSTGRES_PASSWORD" "$OPENAI_API_KEY" "$API_ACCESS_TOKEN" "$GRAFANA_ADMIN_PASSWORD" > .env
       - name: Validate Compose configuration
         env:
           POSTGRES_PASSWORD: ci_url_safe_password_123456789
           OPENAI_API_KEY: sk-test-placeholder
           API_ACCESS_TOKEN: ci_test_token_with_more_than_32_characters
+          GRAFANA_ADMIN_PASSWORD: ci_grafana_password_for_validation_only
         run: docker compose config --quiet
+      - name: Smoke test telemetry services
+        env:
+          POSTGRES_PASSWORD: ci_url_safe_password_123456789
+          OPENAI_API_KEY: sk-test-placeholder
+          API_ACCESS_TOKEN: ci_test_token_with_more_than_32_characters
+          GRAFANA_ADMIN_PASSWORD: ci_grafana_password_for_validation_only
+        run: |
+          docker compose up -d tempo otel-collector grafana
+          for endpoint in http://127.0.0.1:3200/ready http://127.0.0.1:13133/ http://127.0.0.1:3000/api/health; do
+            ready=0
+            for attempt in $(seq 1 90); do
+              if curl --fail --silent --show-error "$endpoint" >/dev/null; then
+                ready=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$ready" != 1 ]; then
+              echo "::error::Telemetry readiness check failed: $endpoint"
+              docker compose ps --all
+              docker compose logs --no-color --tail=200 tempo otel-collector grafana
+              exit 1
+            fi
+          done
+      - name: Stop telemetry services
+        if: always()
+        run: docker compose down -v
       - name: Build API image
         run: docker build --tag cortex-rag:ci .
       - name: Verify non-root image user
