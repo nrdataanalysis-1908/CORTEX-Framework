@@ -47,3 +47,8 @@ The trace detail response preserves chronological ordering and adds a bounded
 indent child spans and display their parent relationship. Missing parents are
 shown as roots; cyclic parent references are flattened to depth zero. The
 depth is capped at 32 and does not expose span attributes, events, or payloads.
+
+
+## Client-side trace filters
+
+The trace list supports in-memory filtering by trace name, trace ID, service name, and status (OK, ERROR, or UNSET). Filters operate only on already retrieved, allowlisted trace summaries; they do not issue additional Tempo queries or expose span attributes, events, prompts, or document content. The displayed count distinguishes filtered results from the total retrieved traces. Clearing the filters restores the complete retrieved list.
