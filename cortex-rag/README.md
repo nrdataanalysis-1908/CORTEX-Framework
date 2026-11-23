@@ -93,7 +93,7 @@ Configure as variáveis em .env. Não versione chaves ou segredos.
 ### Database
 
 ~~~powershell
-docker compose up -d
+docker compose up -d db
 ~~~
 
 ### API
@@ -111,6 +111,19 @@ python -m pytest tests -q
 ~~~
 
 A suíte contém testes unitários e testes de integração que exigem PostgreSQL 16 com pgvector ativo. Os testes de ingestão substituem o provedor de embeddings por funções controladas; não realizam chamadas à API OpenAI. O workflow do GitHub Actions provisiona PostgreSQL automaticamente.
+
+### Containerized API runtime
+
+The Docker image runs the API as an unprivileged `cortex` user. The Compose API service adds a read-only root filesystem, a bounded writable `/tmp`, drops Linux capabilities, enables `no-new-privileges`, and applies container-level CPU, memory, and PID ceilings. The PDF child worker inherits the container's outer resource envelope; its process-level limits remain active as an additional control.
+
+Configure `POSTGRES_PASSWORD`, `OPENAI_API_KEY`, and a random `API_ACCESS_TOKEN` (at least 32 characters) in `.env`. For example, generate URL-safe secrets with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Then run:
+
+~~~powershell
+docker compose up --build -d
+docker compose ps
+~~~
+
+The API is available at `http://localhost:8000` (or `CORTEX_API_PORT`). The PostgreSQL port is bound to localhost only. The container limits apply to the API and its child processes together; they are not per-worker quotas. These controls reduce container privileges and resource exposure, but do not provide network-egress isolation, a separate worker identity, or a complete security sandbox. Deployments handling hostile documents should add platform-specific isolation and ingress controls.
 
 ### Retrieval evaluation
 
@@ -247,6 +260,7 @@ cortex-rag/
 - [ ] Métricas Prometheus e tracing distribuído.
 - [ ] OCR e avaliação multimodal.
 - [x] Extração PDF em worker separado com timeout e limites de recursos para Linux e Windows.
+- [x] Imagem Docker da API com usuário não privilegiado e perfil Compose com filesystem somente leitura e limites de recursos.
 
 ---
 
