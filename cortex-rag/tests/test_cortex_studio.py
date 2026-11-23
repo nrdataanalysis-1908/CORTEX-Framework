@@ -24,6 +24,7 @@ def _client(monkeypatch, handler):
 
 
 def test_studio_trace_list_requires_api_key():
+    settings.api_access_token = API_KEY
     response = TestClient(app).get("/studio/traces")
     assert response.status_code == 401
 
