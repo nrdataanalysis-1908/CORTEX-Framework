@@ -20,6 +20,7 @@ from app.request_limits import RequestBodyLimitMiddleware
 from app.resilience import BulkheadFullError, CircuitOpenError
 from app.pdf_isolation import PdfWorkerExecutionError, PdfWorkerTimeoutError
 from app.tracing import configure_tracing
+from app.cortex_studio import router as cortex_studio_router
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 # Allow bounded multipart framing/metadata in addition to the 15 MiB file payload.
@@ -69,6 +70,7 @@ app.add_middleware(
     protected_path="/documents",
 )
 configure_tracing(app)
+app.include_router(cortex_studio_router)
 
 
 def _resolve_request_id(candidate: str | None) -> str:
