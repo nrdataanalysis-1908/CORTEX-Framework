@@ -99,7 +99,7 @@ jobs:
           OPENAI_API_KEY: sk-test-placeholder
           API_ACCESS_TOKEN: ci_test_token_with_more_than_32_characters
         run: |
-          printf 'POSTGRES_PASSWORD=%s\\nOPENAI_API_KEY=%s\\nAPI_ACCESS_TOKEN=%s\\nDATABASE_URL=postgresql://postgres:postgres@localhost:5432/cortex\\n' "$POSTGRES_PASSWORD" "$OPENAI_API_KEY" "$API_ACCESS_TOKEN" > .env
+          printf 'POSTGRES_PASSWORD=%s\nOPENAI_API_KEY=%s\nAPI_ACCESS_TOKEN=%s\nDATABASE_URL=postgresql://postgres:postgres@localhost:5432/cortex\n' "$POSTGRES_PASSWORD" "$OPENAI_API_KEY" "$API_ACCESS_TOKEN" > .env
       - name: Validate Compose configuration
         env:
           POSTGRES_PASSWORD: ci_url_safe_password_123456789
