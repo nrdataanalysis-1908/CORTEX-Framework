@@ -135,7 +135,7 @@ A execução de avaliação requer PostgreSQL ativo, documento previamente inger
 | POST | /documents | PDF/TXT ingestion |
 | POST | /ask | Contextual question answering |
 
-As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito. O upload aceita apenas PDF e TXT, confere extensão, MIME e assinatura binária, rejeita PDFs criptografados/corrompidos e limita PDFs a 500 páginas. A coleta de texto PDF usa callbacks do parser e interrompe a acumulação ao atingir 2 milhões de caracteres por documento ou 250 mil por página, antes de seguir para chunking e embeddings. TXT exige UTF-8 válido; nomes de arquivo são normalizados para impedir persistência de caminhos fornecidos pelo cliente. O limite de tamanho permanece em 15 MB. Os callbacks limitam o texto acumulado pela aplicação e interrompem a extração quando os tetos são excedidos; eles não garantem limite rígido de memória/CPU dentro do parser nem substituem isolamento de processo, timeout e quotas do sistema operacional.
+As respostas HTTP incluem `X-Request-ID` e `X-Process-Time-Ms`. Os logs de requisição são emitidos em JSON. O cliente OpenAI utiliza timeout e número máximo de retries configuráveis; conexões PostgreSQL possuem timeout explícito. O upload aceita apenas PDF e TXT, confere extensão, MIME e assinatura binária, rejeita PDFs criptografados/corrompidos e limita PDFs a 500 páginas. A coleta de texto PDF usa callbacks do parser e interrompe a acumulação ao atingir 2 milhões de caracteres por documento ou 250 mil por página, antes de seguir para chunking e embeddings. TXT exige UTF-8 válido; nomes de arquivo são normalizados para impedir persistência de caminhos fornecidos pelo cliente. O limite de tamanho permanece em 15 MB. A extração PDF é executada em um processo filho supervisionado, separado do processo da API. O worker possui timeout de parede de 45 segundos, teto de memória de 512 MiB e limite de CPU de 30 segundos. Em Linux, os limites são aplicados com `resource.setrlimit` (`RLIMIT_AS` e `RLIMIT_CPU`); em Windows, o processo é associado a um Windows Job Object com limites de memória/CPU e encerramento ao fechar o job. Se o isolamento nativo não puder ser configurado, a extração falha de forma fechada; timeout retorna HTTP 504 e falha do worker HTTP 503. Os callbacks de `pypdf` continuam limitando o texto acumulado a 2 milhões de caracteres por documento e 250 mil por página. Esses mecanismos limitam recursos do processo, mas não constituem sandbox de segurança: o worker executa sob a mesma identidade do serviço e não substitui execução em contêiner/VM com privilégios mínimos para documentos hostis.
 
 ### Security and traffic controls
 
@@ -246,6 +246,7 @@ cortex-rag/
 - [x] Validação de upload por extensão, MIME, assinatura, codificação, nome de arquivo e limite de páginas.
 - [ ] Métricas Prometheus e tracing distribuído.
 - [ ] OCR e avaliação multimodal.
+- [x] Extração PDF em worker separado com timeout e limites de recursos para Linux e Windows.
 
 ---
 
