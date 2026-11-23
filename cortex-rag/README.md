@@ -310,7 +310,10 @@ cortex-rag/
 
 </div>
 
-## CORTEX Studio — Trace API (MVP)
+## CORTEX Studio — Trace Explorer (MVP)
+
+A interface web inicial está disponível em `GET /studio/ui`, no mesmo host da API. Informe o valor de `API_ACCESS_TOKEN` na própria página para consultar a lista de traces e inspecionar a timeline cronológica de spans. A interface é HTML/CSS/JavaScript estático, sem framework adicional ou dependências de CDN; a chave não é persistida no navegador. Consulte [Trace Explorer UI](../docs/studio/TRACE_EXPLORER_UI.md).
+
 
 A API de inspeção do CORTEX Studio oferece leitura autenticada de traces armazenados no Grafana Tempo:
 
