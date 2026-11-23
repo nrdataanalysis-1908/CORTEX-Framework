@@ -75,23 +75,23 @@ def _safe_trace_summary(item: dict[str, Any]) -> dict[str, Any] | None:
 
 def _add_span_depths(spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Annotate spans with bounded parent depth; malformed cycles become roots."""
-by_id = {
-    item["span_id"]: item["parent_span_id"]
-    for item in spans
-    if isinstance(item.get("span_id"), str) and item["span_id"]
-}
-for item in spans:
-    current = item.get("parent_span_id")
-    visited = {item.get("span_id")}
-    depth = 0
-    while isinstance(current, str) and current in by_id:
-        if current in visited:
-            depth = 0
-            break
-        visited.add(current)
-        depth += 1
-        current = by_id[current]
-    item["depth"] = min(depth, 32)
+    by_id = {
+        item["span_id"]: item["parent_span_id"]
+        for item in spans
+        if isinstance(item.get("span_id"), str) and item["span_id"]
+    }
+    for item in spans:
+        current = item.get("parent_span_id")
+        visited = {item.get("span_id")}
+        depth = 0
+        while isinstance(current, str) and current in by_id:
+            if current in visited:
+                depth = 0
+                break
+            visited.add(current)
+            depth += 1
+            current = by_id[current]
+        item["depth"] = min(depth, 32)
     return spans
 
 
