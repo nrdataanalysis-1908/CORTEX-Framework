@@ -10,6 +10,12 @@ distributor:
         http:
           endpoint: 0.0.0.0:4318
 
+backend_scheduler:
+  provider:
+    compaction:
+      compaction:
+        block_retention: 72h
+
 storage:
   trace:
     backend: local
@@ -17,10 +23,6 @@ storage:
       path: /var/tempo/wal
     local:
       path: /var/tempo/blocks
-
-compactor:
-  compaction:
-    block_retention: 72h
 
 usage_report:
   reporting_enabled: false
