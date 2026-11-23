@@ -73,6 +73,28 @@ def _safe_trace_summary(item: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _add_span_depths(spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Annotate spans with bounded parent depth; malformed cycles become roots."""
+by_id = {
+    item["span_id"]: item["parent_span_id"]
+    for item in spans
+    if isinstance(item.get("span_id"), str) and item["span_id"]
+}
+for item in spans:
+    current = item.get("parent_span_id")
+    visited = {item.get("span_id")}
+    depth = 0
+    while isinstance(current, str) and current in by_id:
+        if current in visited:
+            depth = 0
+            break
+        visited.add(current)
+        depth += 1
+        current = by_id[current]
+    item["depth"] = min(depth, 32)
+    return spans
+
+
 def _flatten_spans(payload: dict[str, Any], trace_id: str) -> list[dict[str, Any]]:
     batches = payload.get("batches", [])
     if not isinstance(batches, list):
@@ -108,25 +130,7 @@ def _flatten_spans(payload: dict[str, Any], trace_id: str) -> list[dict[str, Any
                 })
     spans.sort(key=lambda item: int(item["start_time_unix_nano"] or 0))
 
-    # Derive a bounded visual depth from parent_span_id without exposing
-    # arbitrary OTLP attributes or trusting the upstream span graph.
-    by_id = {
-        item["span_id"]: item["parent_span_id"]
-        for item in spans
-        if isinstance(item.get("span_id"), str) and item["span_id"]
-    }
-    for item in spans:
-        current = item.get("parent_span_id")
-        visited = {item.get("span_id")}
-        depth = 0
-        while isinstance(current, str) and current in by_id:
-            if current in visited:
-                depth = 0
-                break
-            visited.add(current)
-            depth += 1
-            current = by_id[current]
-        item["depth"] = min(depth, 32)
+    _add_span_depths(spans)
     return spans
 
 
