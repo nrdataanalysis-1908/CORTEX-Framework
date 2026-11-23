@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     embedding_max_concurrency: int = Field(default=4, ge=1, le=100)
     chat_max_concurrency: int = Field(default=4, ge=1, le=100)
     database_connect_timeout_seconds: int = Field(default=5, ge=1, le=60)
+    cortex_tempo_url: str = "http://localhost:3200"
+    cortex_tempo_timeout_seconds: float = Field(default=3.0, gt=0, le=30)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

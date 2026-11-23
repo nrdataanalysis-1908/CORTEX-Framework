@@ -309,3 +309,14 @@ cortex-rag/
 <sub>Experimental implementation · engineering foundation in progress</sub>
 
 </div>
+
+## CORTEX Studio — Trace API (MVP)
+
+A API de inspeção do CORTEX Studio oferece leitura autenticada de traces armazenados no Grafana Tempo:
+
+- `GET /studio/traces?limit=50&lookback_seconds=86400` lista traces recentes.
+- `GET /studio/traces/{trace_id}` retorna spans ordenados cronologicamente para inspeção.
+- Ambas as rotas exigem `X-API-Key` e reutilizam `API_ACCESS_TOKEN`.
+- `CORTEX_TEMPO_URL` aponta para o Tempo pela rede interna; em Docker Compose, use `http://tempo:3200`.
+- Respostas expõem somente metadados permitidos (serviço, nome, duração, status e IDs). Atributos, eventos, prompts, documentos e payloads não são retornados.
+- Limites: até 200 traces por consulta e lookback máximo de 7 dias; o MVP é somente leitura.
