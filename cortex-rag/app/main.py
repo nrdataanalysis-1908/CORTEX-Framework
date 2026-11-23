@@ -2,13 +2,14 @@ import json
 import logging
 import math
 import uuid
+from pathlib import Path
 from contextlib import asynccontextmanager
 from time import perf_counter
 
 import psycopg
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi import Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
@@ -71,6 +72,13 @@ app.add_middleware(
 )
 configure_tracing(app)
 app.include_router(cortex_studio_router)
+
+
+@app.get("/studio/ui", response_class=HTMLResponse, include_in_schema=False)
+def cortex_studio_ui():
+    """Serve the static trace explorer; trace data remains protected by API-key auth."""
+    page = Path(__file__).parent / "static" / "studio.html"
+    return HTMLResponse(page.read_text(encoding="utf-8"))
 
 
 def _resolve_request_id(candidate: str | None) -> str:
