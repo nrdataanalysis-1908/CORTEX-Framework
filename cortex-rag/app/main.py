@@ -9,6 +9,7 @@ import psycopg
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi import Depends
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from app.db import check_database, init_db
@@ -17,6 +18,7 @@ from app.rag import answer_question, ingest
 from app.rate_limit import enforce_api_rate_limit
 from app.request_limits import RequestBodyLimitMiddleware
 from app.resilience import BulkheadFullError, CircuitOpenError
+from app.pdf_isolation import PdfWorkerExecutionError, PdfWorkerTimeoutError
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 # Allow bounded multipart framing/metadata in addition to the 15 MiB file payload.
@@ -154,11 +156,15 @@ async def _read_upload_limited(file: UploadFile) -> bytes:
 async def upload_document(file: UploadFile = File(...)):
     try:
         data = await _read_upload_limited(file)
-        return ingest(file.filename or "", data, file.content_type)
+        return await run_in_threadpool(ingest, file.filename or "", data, file.content_type)
     except CircuitOpenError as exc:
         raise _circuit_open_http_exception(exc) from exc
     except BulkheadFullError as exc:
         raise _bulkhead_full_http_exception(exc) from exc
+    except PdfWorkerTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
+    except PdfWorkerExecutionError as exc:
+        raise HTTPException(status_code=503, detail="Worker de extração PDF indisponível ou sem isolamento.") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
