@@ -78,6 +78,8 @@ def test_studio_trace_detail_flattens_spans_without_attributes(monkeypatch):
     span = body["spans"][0]
     assert span["service_name"] == "cortex-rag"
     assert span["duration_ms"] == 5
+    assert span["depth"] == 0
+    assert span["parent_span_id"] is None
     assert "attributes" not in span
     assert "private" not in response.text
 
@@ -107,3 +109,30 @@ def test_studio_ui_is_served_without_exposing_trace_data():
     assert "X-API-Key" in response.text
     assert "/studio/traces" in response.text
     assert "localStorage" not in response.text
+
+
+def test_studio_span_depth_tracks_parent_hierarchy_and_breaks_cycles():
+    spans = [
+        {"span_id": "root", "parent_span_id": None, "start_time_unix_nano": "1"},
+        {"span_id": "child", "parent_span_id": "root", "start_time_unix_nano": "2"},
+        {"span_id": "grandchild", "parent_span_id": "child", "start_time_unix_nano": "3"},
+        {"span_id": "cycle-a", "parent_span_id": "cycle-b", "start_time_unix_nano": "4"},
+        {"span_id": "cycle-b", "parent_span_id": "cycle-a", "start_time_unix_nano": "5"},
+        {"span_id": "orphan", "parent_span_id": "missing", "start_time_unix_nano": "6"},
+    ]
+
+    by_id = {item["span_id"]: item["parent_span_id"] for item in spans}
+    for item in spans:
+        current = item.get("parent_span_id")
+        visited = {item.get("span_id")}
+        depth = 0
+        while isinstance(current, str) and current in by_id:
+            if current in visited:
+                depth = 0
+                break
+            visited.add(current)
+            depth += 1
+            current = by_id[current]
+        item["depth"] = min(depth, 32)
+
+    assert [item["depth"] for item in spans] == [0, 1, 2, 0, 0, 0]
