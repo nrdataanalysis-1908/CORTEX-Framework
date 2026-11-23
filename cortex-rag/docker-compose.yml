@@ -62,6 +62,8 @@ services:
     volumes:
       - ./observability/tempo.yaml:/etc/tempo.yaml:ro
       - cortex_tempo_data:/var/tempo
+    ports:
+      - "127.0.0.1:3200:3200"
     mem_limit: 1g
     cpus: 1.0
     pids_limit: 128
@@ -72,6 +74,8 @@ services:
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./observability/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:13133:13133"
     depends_on:
       - tempo
     mem_limit: 384m
