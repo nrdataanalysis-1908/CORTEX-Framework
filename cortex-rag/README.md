@@ -277,7 +277,8 @@ cortex-rag/
 - [x] Bulkheads independentes para limitar concorrência de embeddings e geração, com telemetria de saturação.
 - [x] API Key compartilhada e rate limiting atômico por chave no PostgreSQL. A suíte de integração também verifica a quota sob concorrência real entre conexões PostgreSQL.
 - [x] Validação de upload por extensão, MIME, assinatura, codificação, nome de arquivo e limite de páginas.
-- [ ] Métricas Prometheus e backend de traces consultável para o CORTEX Studio.\n- [x] Instrumentação OpenTelemetry inicial com exportação OTLP opcional.
+- [ ] Métricas Prometheus e backend de traces consultável para o CORTEX Studio.
+- [x] Instrumentação OpenTelemetry inicial com exportação OTLP opcional.
 - [ ] OCR e avaliação multimodal.
 - [x] Extração PDF em worker separado com timeout e limites de recursos para Linux e Windows.
 - [x] Imagem Docker da API com usuário não privilegiado e perfil Compose com filesystem somente leitura e limites de recursos.
