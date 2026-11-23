@@ -182,6 +182,7 @@ def extract_validated_text_isolated(
     """Isolate PDF parsing; retain the existing lightweight path for TXT files."""
     from app.upload_validation import extract_validated_text
 
-    if PurePath(filename.replace("\\", "/")).suffix.lower() != ".pdf":
+    normalized_name = PurePath(filename.replace("\\\\", "/")).name
+    if PurePath(normalized_name).suffix.lower() != ".pdf":
         return extract_validated_text(filename, data, content_type)
     return _run_pdf_worker(filename, data, content_type)
