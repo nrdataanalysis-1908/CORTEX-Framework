@@ -22,60 +22,60 @@
 <img src="https://img.shields.io/badge/EDITION-Research-102A43?style=flat-square">
 </p>
 
-## 00 / Visão geral
+## 00 / Overview
 
-O CORTEX (Cognitive Optical Reasoning Engine) é uma iniciativa de pesquisa aplicada em inteligência documental, engenharia de dados e automação de workflows corporativos.
+CORTEX (Cognitive Optical Reasoning Engine) is an applied research initiative in document intelligence, data engineering, and enterprise workflow automation.
 
-A pesquisa investiga como documentos heterogêneos podem ser convertidos em registros estruturados, verificáveis e rastreáveis, preservando a proveniência das evidências e os critérios que sustentam cada decisão.
+The research investigates how heterogeneous documents can be converted into structured, verifiable, and traceable records while preserving evidence provenance and the criteria supporting each decision.
 
-O framework conceitual explora três domínios complementares:
+The conceptual framework explores three complementary domains:
 
-| Módulo conceitual | Responsabilidade de pesquisa |
+| Conceptual module | Research responsibility |
 |---|---|
-| **OPTIC** | Percepção documental, leitura multimodal e extração estruturada |
-| **NEXUS** | Arbitragem de evidências, consistência entre fontes e proveniência |
-| **AEGIS** | Restrições simbólicas, validação operacional e justificabilidade |
+| **OPTIC** | Document perception, multimodal reading, and structured extraction |
+| **NEXUS** | Evidence arbitration, cross-source consistency, and provenance |
+| **AEGIS** | Symbolic constraints, operational validation, and explainability |
 
-> **Nota de implementação:** OPTIC, NEXUS e AEGIS compõem a arquitetura de pesquisa descrita no site. Não devem ser interpretados como agentes autônomos já implementados neste repositório. O módulo de software disponível nesta branch é um MVP separado de RAG documental.
+> **Implementation note:** OPTIC, NEXUS, and AEGIS are part of the research architecture described on the website. They must not be interpreted as autonomous agents already implemented in this repository. The software module available on this branch is a separate document RAG MVP.
 
-## 01 / Problema de pesquisa
+## 01 / Research problem
 
-Workflows documentais corporativos combinam formatos heterogêneos, dados incompletos, divergência entre fontes, validação manual e requisitos de auditoria. O desafio não é apenas extrair texto: é preservar a relação entre dado, evidência, regra aplicada e resultado.
+Enterprise document workflows combine heterogeneous formats, incomplete data, discrepancies between sources, manual validation, and audit requirements. The challenge is not merely extracting text: it is preserving the relationship between data, evidence, applied rules, and outcomes.
 
-- **Document heterogeneity** — variação de layout, formato, qualidade e estrutura.
-- **Evidence consistency** — divergências entre documentos e fontes externas.
-- **Operational validation** — regras de negócio e restrições antes da emissão de decisões.
-- **Traceability** — proveniência e reconstituição do caminho decisório.
-- **Resilience** — tratamento de falhas parciais, ambiguidades e baixa confiança.
+- **Document heterogeneity** — variation in layout, format, quality, and structure.
+- **Evidence consistency** — discrepancies between documents and external sources.
+- **Operational validation** — business rules and constraints before decisions are issued.
+- **Traceability** — provenance and reconstruction of the decision path.
+- **Resilience** — handling partial failures, ambiguity, and low confidence.
 
-## 02 / Arquitetura de referência
+## 02 / Reference architecture
 
-A visão de pesquisa organiza o processamento documental em componentes desacoplados, com contratos explícitos e avaliação individual. Cada capacidade deve ser identificada como implementada, experimental ou planejada.
+The research vision organizes document processing into decoupled components with explicit contracts and independent evaluation. Each capability must be identified as implemented, experimental, or planned.
 
-| Camada | Escopo |
+| Layer | Scope |
 |---|---|
-| Acquisition | Recepção e normalização de documentos |
-| Perception | Extração textual, layout e entidades |
-| Evidence | Associação de campos às respectivas fontes |
-| Arbitration | Tratamento de conflitos e inconsistências |
-| Guardrails | Regras, restrições e validação |
-| Orchestration | Coordenação do workflow e observabilidade |
+| Acquisition | Document intake and normalization |
+| Perception | Text, layout, and entity extraction |
+| Evidence | Association of fields with their respective sources |
+| Arbitration | Conflict and inconsistency handling |
+| Guardrails | Rules, constraints, and validation |
+| Orchestration | Workflow coordination and observability |
 
-## 03 / Implementação disponível — CORTEX RAG
+## 03 / Available implementation — CORTEX RAG
 
 <div align="center">
 
 ### Retrieval-Augmented Generation · MVP
 
-<img src="cortex-rag/assets/cortex-rag-architecture.svg" alt="Fluxo do MVP CORTEX RAG" width="100%">
+<img src="cortex-rag/assets/cortex-rag-architecture.svg" alt="CORTEX RAG MVP workflow" width="100%">
 
 </div>
 
-O subprojeto cortex-rag contém a implementação inicial de um pipeline RAG: ingestão de PDF/TXT, extração de texto, chunking, geração de embeddings, persistência vetorial em PostgreSQL/pgvector e recuperação de contexto para resposta por LLM.
+The cortex-rag subproject contains the initial implementation of a RAG pipeline: PDF/TXT ingestion, text extraction, chunking, embedding generation, vector persistence in PostgreSQL/pgvector, and context retrieval for LLM-generated answers.
 
-**Stack do MVP**
+**MVP stack**
 
-| Componente | Tecnologia |
+| Component | Technology |
 |---|---|
 | API | FastAPI |
 | Runtime | Python |
@@ -87,50 +87,50 @@ O subprojeto cortex-rag contém a implementação inicial de um pipeline RAG: in
 | Local orchestration | Docker Compose |
 | Unit tests | pytest |
 
-- [Documentação técnica do CORTEX RAG](cortex-rag/README.md)
-- [Protocolo de avaliação](cortex-rag/evaluation/README.md)
-- [Código e artefatos](cortex-rag/)
-- [Branch de desenvolvimento](https://github.com/nrdataanalysis-1908/CORTEX-Framework/tree/feat/cortex-rag-mvp)
+- [CORTEX RAG technical documentation](cortex-rag/README.md)
+- [Evaluation protocol](cortex-rag/evaluation/README.md)
+- [Code and artifacts](cortex-rag/)
+- [Development branch](https://github.com/nrdataanalysis-1908/CORTEX-Framework/tree/feat/cortex-rag-mvp)
 
-## 04 / Metodologia de avaliação
+## 04 / Evaluation methodology
 
-A avaliação separa qualidade de recuperação, qualidade de geração e comportamento operacional. O primeiro conjunto contém 20 perguntas sintéticas vinculadas a trechos de evidência conhecidos.
+The evaluation separates retrieval quality, generation quality, and operational behavior. The initial dataset contains 20 synthetic questions linked to known evidence passages.
 
-<img src="cortex-rag/assets/evaluation-loop.svg" alt="Protocolo de avaliação" width="100%">
+<img src="cortex-rag/assets/evaluation-loop.svg" alt="Evaluation protocol" width="100%">
 
-| Dimensão | Abordagem |
+| Dimension | Approach |
 |---|---|
-| Retrieval | Evidência-ouro encontrada no top-K |
-| Groundedness | Resposta sustentada pelo contexto recuperado |
-| Factuality | Verificação dos fatos contra o documento-fonte |
-| Abstention | Recusa quando não há evidência suficiente |
-| Performance | Latência, consumo de tokens e custo |
+| Retrieval | Gold evidence retrieved within top-K |
+| Groundedness | Answer supported by retrieved context |
+| Factuality | Facts checked against the source document |
+| Abstention | Refusal when sufficient evidence is unavailable |
+| Performance | Latency, token consumption, and cost |
 
-A métrica automatizada atual, evidence_hit_rate_at_k, mede apenas a recuperação do trecho-ouro. Não representa acurácia global, factualidade nem desempenho de produção. Resultados quantitativos só serão publicados após execução reproduzível.
+The current automated metric, evidence_hit_rate_at_k, measures only retrieval of the gold passage. It does not represent overall accuracy, factuality, or production performance. Quantitative results will be published only after reproducible execution.
 
-## 05 / Princípios de engenharia
+## 05 / Engineering principles
 
-1. **Evidence before assertion** — toda afirmação deve ter suporte identificável.
-2. **Validation as a first-class stage** — validação integra o fluxo, não é um remendo posterior.
-3. **Separation of concerns** — percepção, regras, persistência e apresentação possuem fronteiras claras.
-4. **Reproducibility** — entradas, parâmetros, versões e resultados devem ser rastreáveis.
-5. **Failure transparency** — ausência de evidência e falhas devem ser explicitadas.
-6. **Security by design** — dados mínimos, segredos protegidos e acesso controlado.
+1. **Evidence before assertion** — every claim must have identifiable support.
+2. **Validation as a first-class stage** — validation is part of the workflow, not a later patch.
+3. **Separation of concerns** — perception, rules, persistence, and presentation have clear boundaries.
+4. **Reproducibility** — inputs, parameters, versions, and results must be traceable.
+5. **Failure transparency** — missing evidence and failures must be made explicit.
+6. **Security by design** — data minimization, protected secrets, and controlled access.
 
-## 06 / Roadmap de pesquisa e engenharia
+## 06 / Research and engineering roadmap
 
-| Horizonte | Direção |
+| Horizon | Direction |
 |---|---|
-| Current | MVP RAG, recuperação vetorial e protocolo inicial de avaliação |
-| Next | Groundedness, factualidade, observabilidade e testes de integração |
-| Planned | OCR multimodal, evidências por campo e validação cruzada |
-| Research | Negociação entre agentes, restrições simbólicas e replay causal |
+| Current | RAG MVP, vector retrieval, and initial evaluation protocol |
+| Next | Groundedness, factuality, observability, and integration tests |
+| Planned | Multimodal OCR, field-level evidence, and cross-validation |
+| Research | Agent negotiation, symbolic constraints, and causal replay |
 
-## 07 / Estado e reprodutibilidade
+## 07 / Status and reproducibility
 
-Este repositório está em evolução. O código da branch de desenvolvimento deve ser tratado como experimental até que testes integrados, avaliação e documentação de execução sejam concluídos.
+This repository is evolving. Code on the development branch must be treated as experimental until integration tests, evaluation, and execution documentation are complete.
 
-Não são declarados neste README resultados de benchmark, métricas de produção ou funcionalidades ainda não verificadas.
+This README does not claim benchmark results, production metrics, or features that have not yet been verified.
 
 ---
 
