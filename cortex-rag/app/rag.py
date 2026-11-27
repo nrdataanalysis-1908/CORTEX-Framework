@@ -149,6 +149,21 @@ def _citation_metadata(answer: str, evidence_ids: set[str]) -> dict:
 
 def _evaluate_groundedness(answer: str, evidence: list[dict]) -> dict:
     """Ask a separate judge to assess each atomic answer claim against evidence."""
+    if not settings.groundedness_enabled:
+        return {
+            "groundedness": "not_evaluated",
+            "groundedness_claims": [],
+            "groundedness_summary": {
+                "supported": 0,
+                "unsupported": 0,
+                "contradicted": 0,
+                "unverifiable": 0,
+            },
+            "groundedness_method": "disabled",
+            "groundedness_disclaimer": (
+                "Automatic claim evaluation is disabled by GROUNDEDNESS_ENABLED."
+            ),
+        }
     evidence_ids = {item["evidence_id"] for item in evidence}
     evidence_context = "\n\n".join(
         f"[{item['evidence_id']}] {item['text']}" for item in evidence
