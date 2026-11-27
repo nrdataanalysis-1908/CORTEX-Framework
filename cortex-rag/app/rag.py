@@ -238,9 +238,9 @@ def answer_question(question: str) -> dict:
             "unresolved_citation_ids": [],
             "evidence_retrieved": False,
             "evidence_status": "insufficient",
-            "groundedness": "unverifiable",
+            "groundedness": "not_evaluated",
             "groundedness_claims": [],
-            "groundedness_summary": {"total": 0, "supported": 0, "unsupported": 0, "contradicted": 0, "unverifiable": 0, "invalid_citation_reference": 0},
+            "groundedness_summary": {"supported": 0, "unsupported": 0, "contradicted": 0, "unverifiable": 0},\n            "groundedness_method": "llm_judge",\n            "groundedness_disclaimer": "No evidence was retrieved; claim evaluation was not run.",
         }
 
     evidence = [
