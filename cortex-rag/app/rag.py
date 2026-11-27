@@ -1,4 +1,6 @@
 import hashlib
+import re
+
 from openai import OpenAI
 
 from app.chunking import split_text
@@ -19,6 +21,9 @@ from app.resilience import (
     embedding_bulkhead,
     chat_bulkhead,
 )
+
+_CITATION_RE = re.compile(r"\[E([1-9][0-9]*)\]")
+MIN_EVIDENCE_SIMILARITY = 0.25
 
 # Application-level retry policy owns retries; disable hidden SDK retries to
 # prevent multiplicative attempts and make retry telemetry deterministic.
@@ -119,11 +124,31 @@ def ingest(filename: str, data: bytes, content_type: str | None = None) -> dict:
     return {"document_id": document_id, "chunks": len(chunks), "status": "ingested"}
 
 
+def _citation_metadata(answer: str, evidence_ids: set[str]) -> dict:
+    """Validate citation tokens against evidence IDs actually supplied to the model."""
+    mentioned = list(dict.fromkeys(f"E{match}" for match in _CITATION_RE.findall(answer)))
+    valid = [item for item in mentioned if item in evidence_ids]
+    invalid = [item for item in mentioned if item not in evidence_ids]
+
+    if invalid:
+        status = "invalid_citation_reference"
+    elif valid:
+        status = "retrieved_cited_not_verified"
+    else:
+        status = "retrieved_not_cited"
+
+    return {
+        "citation_ids": valid,
+        "unresolved_citation_ids": invalid,
+        "evidence_status": status,
+    }
+
+
 def answer_question(question: str) -> dict:
     query_vector = embed([question])[0]
     with connect() as conn:
         rows = conn.execute(
-            """SELECT d.filename, c.content,
+            """SELECT d.id, c.id, d.filename, c.chunk_index, c.content,
                       1 - (c.embedding <=> %s) AS similarity
                FROM rag_chunks c
                JOIN rag_documents d ON d.id = c.document_id
@@ -132,17 +157,37 @@ def answer_question(question: str) -> dict:
             (query_vector, query_vector, settings.top_k),
         ).fetchall()
 
-    if not rows or rows[0][2] < 0.25:
+    if not rows or rows[0][5] < MIN_EVIDENCE_SIMILARITY:
         return {
             "answer": "Não encontrei evidências suficientes nos documentos disponíveis.",
             "sources": [],
+            "evidence": [],
+            "citation_ids": [],
+            "unresolved_citation_ids": [],
             "evidence_retrieved": False,
+            "evidence_status": "insufficient",
             "groundedness": "not_evaluated",
         }
 
+    evidence = [
+        {
+            "evidence_id": f"E{index}",
+            "document_id": row[0],
+            "chunk_id": row[1],
+            "filename": row[2],
+            "chunk_index": row[3],
+            "similarity": round(float(row[5]), 4),
+            "text": row[4],
+        }
+        for index, row in enumerate(rows, start=1)
+    ]
+    evidence_ids = {item["evidence_id"] for item in evidence}
     context = "\n\n".join(
-        f"[Fonte: {filename} | similaridade: {score:.3f}]\n{content}"
-        for filename, content, score in rows
+        f"[{item['evidence_id']} | documento: {item['filename']} | "
+        f"document_id: {item['document_id']} | chunk_id: {item['chunk_id']} | "
+        f"chunk_index: {item['chunk_index']} | similaridade: {item['similarity']:.3f}]\n"
+        f"{item['text']}"
+        for item in evidence
     )
     completion = _call_openai(
         "chat.completions.create",
@@ -153,24 +198,31 @@ def answer_question(question: str) -> dict:
                 {
                     "role": "system",
                     "content": (
-                        "Responda em português usando somente o contexto fornecido. "
-                        "Se o contexto não sustentar a resposta, declare que não há evidência suficiente. "
-                        "Não invente fatos. Cite os nomes dos arquivos usados."
+                        "Responda em português usando somente as evidências fornecidas. "
+                        "Toda afirmação factual baseada no contexto deve citar o identificador "
+                        "correspondente no formato [E1]. Não invente nem altere identificadores. "
+                        "Se as evidências não sustentarem a resposta, declare que não há "
+                        "evidência suficiente. Uma citação identifica a origem do trecho, "
+                        "mas não prova por si só que a afirmação está correta."
                     ),
                 },
                 {
                     "role": "user",
-                    "content": f"CONTEXTO:\n{context}\n\nPERGUNTA:\n{question}",
+                    "content": f"EVIDÊNCIAS:\n{context}\n\nPERGUNTA:\n{question}",
                 },
             ],
         ),
     )
+    answer = completion.choices[0].message.content or ""
+    citation_metadata = _citation_metadata(answer, evidence_ids)
     return {
-        "answer": completion.choices[0].message.content or "",
+        "answer": answer,
         "sources": [
-            {"filename": row[0], "similarity": round(float(row[2]), 4)}
-            for row in rows
+            {"filename": item["filename"], "similarity": item["similarity"]}
+            for item in evidence
         ],
+        "evidence": evidence,
+        **citation_metadata,
         "evidence_retrieved": True,
         "groundedness": "not_evaluated",
     }
