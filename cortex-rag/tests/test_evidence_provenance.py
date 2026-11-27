@@ -39,8 +39,8 @@ def _mock_model(operation, call, answer):
             "claims": [{
                 "claim": "O prazo é de 15 dias.",
                 "status": "supported",
-                "evidence_ids": ["E1"],
-                "rationale": "O trecho E1 informa o prazo de 15 dias.",
+                "evidence_ids": ["E99"] if "[E99]" in answer else ["E1"],
+                "rationale": "O trecho indicado informa o prazo de 15 dias.",
             }]
         }))
     return _completion(answer)
