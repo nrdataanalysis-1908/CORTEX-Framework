@@ -1,4 +1,5 @@
 import hashlib
+import json
 import re
 
 from openai import OpenAI
@@ -13,7 +14,7 @@ from app.observability import (
     record_retry_recovered,
 )
 from app.pdf_isolation import extract_validated_text_isolated
-from app.groundedness import parse_judge_output
+from evaluation.groundedness import validate_groundedness_result
 from app.resilience import (
     is_retryable_openai_error,
     BulkheadFullError,
@@ -173,8 +174,8 @@ def _evaluate_groundedness(answer: str, evidence: list[dict]) -> dict:
                             "Não considere uma citação como prova por si só. Inclua citation_ids "
                             "somente quando a resposta associar explicitamente a afirmação à "
                             "evidência correspondente. Retorne JSON com a forma: "
-                            '{"claims":[{"claim":"...","verdict":"supported|unsupported|'
-                            'contradicted|unverifiable","citation_ids":["E1"],'
+                            '{"claims":[{"claim":"...","status":"supported|unsupported|'
+                            'contradicted|unverifiable","evidence_ids":["E1"],'
                             '"rationale":"..."}]}. Se não houver afirmações verificáveis, '
                             "retorne claims vazio."
                         ),
@@ -190,7 +191,14 @@ def _evaluate_groundedness(answer: str, evidence: list[dict]) -> dict:
             ),
         )
         raw = completion.choices[0].message.content or ""
-        return parse_judge_output(raw, evidence_ids)
+        result = validate_groundedness_result(json.loads(raw), evidence_ids)
+        return {
+            "groundedness": result["status"],
+            "groundedness_claims": result["claims"],
+            "groundedness_summary": result["claim_status_counts"],
+            "groundedness_method": result["evaluation_method"],
+            "groundedness_disclaimer": result["disclaimer"],
+        }
     except Exception as exc:
         # Evaluation is advisory: judge/provider/format failures must not fail /ask.
         return {
