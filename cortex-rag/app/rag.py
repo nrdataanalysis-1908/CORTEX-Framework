@@ -13,7 +13,7 @@ from app.observability import (
     record_retry_recovered,
 )
 from app.pdf_isolation import extract_validated_text_isolated
-from app.groundedness import GroundednessEvaluationError, parse_judge_output
+from app.groundedness import parse_judge_output
 from app.resilience import (
     is_retryable_openai_error,
     BulkheadFullError,
