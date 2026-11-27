@@ -240,7 +240,8 @@ def answer_question(question: str) -> dict:
             "evidence_status": "insufficient",
             "groundedness": "not_evaluated",
             "groundedness_claims": [],
-            "groundedness_summary": {"supported": 0, "unsupported": 0, "contradicted": 0, "unverifiable": 0},\n            "groundedness_method": "llm_judge",\n            "groundedness_disclaimer": "No evidence was retrieved; claim evaluation was not run.",
+            "groundedness_summary": {"supported": 0, "unsupported": 0, "contradicted": 0, "unverifiable": 0},
+            "groundedness_method": "llm_judge",\n            "groundedness_disclaimer": "No evidence was retrieved; claim evaluation was not run.",
         }
 
     evidence = [
