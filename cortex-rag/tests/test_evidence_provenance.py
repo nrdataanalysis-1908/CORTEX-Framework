@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import json
 
 import pytest
 
@@ -32,6 +33,19 @@ def _completion(answer):
     )
 
 
+def _mock_model(operation, call, answer):
+    if operation == "chat.completions.groundedness":
+        return _completion(json.dumps({
+            "claims": [{
+                "claim": "O prazo é de 15 dias.",
+                "status": "supported",
+                "evidence_ids": ["E99"] if "[E99]" in answer else ["E1"],
+                "rationale": "O trecho indicado informa o prazo de 15 dias.",
+            }]
+        }))
+    return _completion(answer)
+
+
 @pytest.fixture
 def retrieval(monkeypatch):
     rows = [
@@ -48,7 +62,7 @@ def test_answer_returns_verifiable_document_and_chunk_references(retrieval, monk
     monkeypatch.setattr(
         rag,
         "_call_openai",
-        lambda operation, call: _completion("O prazo é de 15 dias [E1]."),
+        lambda operation, call: _mock_model(operation, call, "O prazo é de 15 dias [E1]."),
     )
 
     result = rag.answer_question("Qual é o prazo?")
@@ -57,7 +71,7 @@ def test_answer_returns_verifiable_document_and_chunk_references(retrieval, monk
     assert "d.id" in retrieval.query
     assert result["evidence_retrieved"] is True
     assert result["evidence_status"] == "retrieved_cited_not_verified"
-    assert result["groundedness"] == "not_evaluated"
+    assert result["groundedness"] == "grounded"
     assert result["citation_ids"] == ["E1"]
     assert result["unresolved_citation_ids"] == []
     assert result["evidence"][0] == {
@@ -75,7 +89,7 @@ def test_answer_flags_unknown_citation_ids(retrieval, monkeypatch):
     monkeypatch.setattr(
         rag,
         "_call_openai",
-        lambda operation, call: _completion("O prazo é de 15 dias [E99]."),
+        lambda operation, call: _mock_model(operation, call, "O prazo é de 15 dias [E99]."),
     )
 
     result = rag.answer_question("Qual é o prazo?")
@@ -83,14 +97,14 @@ def test_answer_flags_unknown_citation_ids(retrieval, monkeypatch):
     assert result["citation_ids"] == []
     assert result["unresolved_citation_ids"] == ["E99"]
     assert result["evidence_status"] == "invalid_citation_reference"
-    assert result["groundedness"] == "not_evaluated"
+    assert result["groundedness"] == "evaluation_error"
 
 
 def test_answer_reports_retrieved_but_uncited_evidence(retrieval, monkeypatch):
     monkeypatch.setattr(
         rag,
         "_call_openai",
-        lambda operation, call: _completion("O prazo é de 15 dias."),
+        lambda operation, call: _mock_model(operation, call, "O prazo é de 15 dias."),
     )
 
     result = rag.answer_question("Qual é o prazo?")
