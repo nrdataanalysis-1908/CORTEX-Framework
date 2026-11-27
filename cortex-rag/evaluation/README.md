@@ -22,6 +22,20 @@ Para cada consulta, o caso é considerado hit quando o texto de evidência-ouro 
 
 Essas métricas avaliam recuperação e ordenação. Não medem correção factual, groundedness ou qualidade da resposta gerada. O campo legado `score` permanece como alias de Recall@K.
 
+## Proveniência das evidências na API
+
+O endpoint `POST /ask` retorna uma lista `evidence` com referências rastreáveis aos registros recuperados:
+
+- `evidence_id`: identificador local da evidência na resposta (`E1`, `E2`...).
+- `document_id` e `chunk_id`: chaves primárias dos registros persistidos no PostgreSQL.
+- `filename` e `chunk_index`: identificação legível do documento e posição do trecho.
+- `similarity`: similaridade de cosseno retornada pela recuperação.
+- `text`: conteúdo exato do chunk recuperado, para inspeção e conferência.
+
+O modelo é instruído a referenciar evidências no formato `[E1]`. A API valida se os identificadores citados existem no conjunto fornecido ao modelo e separa referências válidas de referências inexistentes. `evidence_status` distingue `insufficient`, `retrieved_not_cited`, `retrieved_cited_not_verified` e `invalid_citation_reference`.
+
+Esses estados descrevem a disponibilidade e a integridade referencial das citações, não a veracidade das afirmações. Por isso, `groundedness` permanece `not_evaluated` até que haja avaliação apropriada. Similaridade vetorial, presença de uma citação ou correspondência de identificador não provam suporte factual.
+
 ## Avaliação de qualidade da resposta
 
 A qualidade da resposta é avaliada separadamente por anotações humanas. Cada afirmação deve ser rotulada como `supported`, `unsupported`, `contradicted` ou `unverifiable`, com evidência ou justificativa registrada. Também se anota se a resposta se absteve e se a abstenção era esperada.
