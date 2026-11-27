@@ -51,3 +51,16 @@ Consulte [ANSWER_QUALITY.md](ANSWER_QUALITY.md) para o formato JSON, critérios 
 - A qualidade da resposta depende de revisão humana e consistência da rubrica.
 - Afirmações não verificáveis são reportadas separadamente e excluídas do denominador das taxas de afirmações decidíveis.
 - As métricas não constituem garantia estatística nem prova universal de factualidade.
+
+
+## Groundedness automático por afirmação
+
+O endpoint `POST /ask` executa uma segunda chamada ao modelo como avaliador (`LLM-as-a-judge`). O juiz decompõe a resposta em afirmações atômicas e compara cada uma com os chunks recuperados, retornando `supported`, `unsupported`, `contradicted` ou `unverifiable`, com justificativa e IDs de evidência associados.
+
+O módulo `evaluation.groundedness.validate_groundedness_result` valida o JSON, rejeita referências a evidências inexistentes e exige ao menos uma evidência para afirmações marcadas como `supported`. O resultado agregado é `grounded`, `unsupported`, `contradicted`, `inconclusive` ou `not_evaluated`. Falhas do juiz são isoladas: a resposta RAG é preservada e `groundedness` recebe `evaluation_error`.
+
+A avaliação automática é uma estimativa produzida por outro LLM, não uma prova de factualidade. Ela pode reproduzir vieses ou erros do modelo; casos de maior impacto exigem revisão humana. A resposta da API inclui `groundedness_method` e `groundedness_disclaimer` para explicitar o método e sua limitação.
+
+## Avaliação humana da qualidade da resposta
+
+A avaliação automática complementa — não substitui — as anotações humanas. Cada afirmação pode continuar sendo rotulada por revisores como `supported`, `unsupported`, `contradicted` ou `unverifiable`, com evidência ou justificativa registrada. O módulo `evaluation.answer_quality.evaluate_annotations` agrega taxas de suporte, afirmações não sustentadas, contradição e acurácia de abstenção.
