@@ -128,6 +128,6 @@ def test_answer_abstains_when_retrieval_has_no_sufficient_evidence(monkeypatch, 
 
     assert result["evidence_retrieved"] is False
     assert result["evidence_status"] == "insufficient"
-    assert result["groundedness"] == "grounded"
+    assert result["groundedness"] == "not_evaluated"
     assert result["evidence"] == []
     assert result["citation_ids"] == []
