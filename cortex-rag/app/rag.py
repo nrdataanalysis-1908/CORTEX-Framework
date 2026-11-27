@@ -150,7 +150,7 @@ def _citation_metadata(answer: str, evidence_ids: set[str]) -> dict:
 def _evaluate_groundedness(answer: str, evidence: list[dict]) -> dict:
     """Ask a separate judge to assess each atomic answer claim against evidence."""
     evidence_ids = {item["evidence_id"] for item in evidence}
-    evidence_context = "\\n\\n".join(
+    evidence_context = "\n\n".join(
         f"[{item['evidence_id']}] {item['text']}" for item in evidence
     )
     try:
@@ -183,8 +183,8 @@ def _evaluate_groundedness(answer: str, evidence: list[dict]) -> dict:
                     {
                         "role": "user",
                         "content": (
-                            f"RESPOSTA:\\n{answer}\\n\\n"
-                            f"EVIDÊNCIAS DISPONÍVEIS:\\n{evidence_context}"
+                            f"RESPOSTA:\n{answer}\n\n"
+                            f"EVIDÊNCIAS DISPONÍVEIS:\n{evidence_context}"
                         ),
                     },
                 ],
