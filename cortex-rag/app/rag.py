@@ -13,6 +13,7 @@ from app.observability import (
     record_retry_recovered,
 )
 from app.pdf_isolation import extract_validated_text_isolated
+from app.groundedness import GroundednessEvaluationError, parse_judge_output
 from app.resilience import (
     is_retryable_openai_error,
     BulkheadFullError,
@@ -144,6 +145,69 @@ def _citation_metadata(answer: str, evidence_ids: set[str]) -> dict:
     }
 
 
+
+def _evaluate_groundedness(answer: str, evidence: list[dict]) -> dict:
+    """Ask a separate judge to assess each atomic answer claim against evidence."""
+    evidence_ids = {item["evidence_id"] for item in evidence}
+    evidence_context = "\\n\\n".join(
+        f"[{item['evidence_id']}] {item['text']}" for item in evidence
+    )
+    try:
+        completion = _call_openai(
+            "chat.completions.groundedness",
+            lambda: client.chat.completions.create(
+                model=settings.chat_model,
+                temperature=0,
+                response_format={"type": "json_object"},
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Você é um avaliador de groundedness de respostas RAG. "
+                            "Decomponha a resposta em afirmações atômicas verificáveis. "
+                            "Para cada afirmação, compare estritamente o conteúdo com as "
+                            "evidências fornecidas. Use somente estes veredictos: "
+                            "supported (evidência sustenta integralmente), "
+                            "unsupported (não há suporte), contradicted (evidência contradiz), "
+                            "unverifiable (não é possível decidir). Não use conhecimento externo. "
+                            "Não considere uma citação como prova por si só. Inclua citation_ids "
+                            "somente quando a resposta associar explicitamente a afirmação à "
+                            "evidência correspondente. Retorne JSON com a forma: "
+                            '{"claims":[{"claim":"...","verdict":"supported|unsupported|'
+                            'contradicted|unverifiable","citation_ids":["E1"],'
+                            '"rationale":"..."}]}. Se não houver afirmações verificáveis, '
+                            "retorne claims vazio."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"RESPOSTA:\\n{answer}\\n\\n"
+                            f"EVIDÊNCIAS DISPONÍVEIS:\\n{evidence_context}"
+                        ),
+                    },
+                ],
+            ),
+        )
+        raw = completion.choices[0].message.content or ""
+        return parse_judge_output(raw, evidence_ids)
+    except Exception as exc:
+        # Evaluation is advisory: judge/provider/format failures must not fail /ask.
+        return {
+            "groundedness": "evaluation_error",
+            "groundedness_claims": [],
+            "groundedness_summary": {
+                "total": 0,
+                "supported": 0,
+                "unsupported": 0,
+                "contradicted": 0,
+                "unverifiable": 0,
+                "invalid_citation_reference": 0,
+            },
+            "groundedness_error": type(exc).__name__,
+        }
+
+
 def answer_question(question: str) -> dict:
     query_vector = embed([question])[0]
     with connect() as conn:
@@ -166,7 +230,9 @@ def answer_question(question: str) -> dict:
             "unresolved_citation_ids": [],
             "evidence_retrieved": False,
             "evidence_status": "insufficient",
-            "groundedness": "not_evaluated",
+            "groundedness": "unverifiable",
+            "groundedness_claims": [],
+            "groundedness_summary": {"total": 0, "supported": 0, "unsupported": 0, "contradicted": 0, "unverifiable": 0, "invalid_citation_reference": 0},
         }
 
     evidence = [
@@ -215,6 +281,7 @@ def answer_question(question: str) -> dict:
     )
     answer = completion.choices[0].message.content or ""
     citation_metadata = _citation_metadata(answer, evidence_ids)
+    groundedness_metadata = _evaluate_groundedness(answer, evidence)
     return {
         "answer": answer,
         "sources": [
@@ -223,6 +290,6 @@ def answer_question(question: str) -> dict:
         ],
         "evidence": evidence,
         **citation_metadata,
+        **groundedness_metadata,
         "evidence_retrieved": True,
-        "groundedness": "not_evaluated",
     }
