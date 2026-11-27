@@ -171,7 +171,7 @@ def _evaluate_groundedness(answer: str, evidence: list[dict]) -> dict:
                             "supported (evidência sustenta integralmente), "
                             "unsupported (não há suporte), contradicted (evidência contradiz), "
                             "unverifiable (não é possível decidir). Não use conhecimento externo. "
-                            "Não considere uma citação como prova por si só. Inclua citation_ids "
+                            "Não considere uma citação como prova por si só. Inclua evidence_ids "
                             "somente quando a resposta associar explicitamente a afirmação à "
                             "evidência correspondente. Retorne JSON com a forma: "
                             '{"claims":[{"claim":"...","status":"supported|unsupported|'
