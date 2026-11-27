@@ -1,5 +1,6 @@
 import pytest
 
+from app import rag
 from evaluation.groundedness import validate_groundedness_result
 
 
@@ -58,3 +59,22 @@ def test_empty_claim_list_is_not_evaluated():
 def test_invalid_judge_output_is_rejected(payload):
     with pytest.raises(ValueError):
         validate_groundedness_result(payload, EVIDENCE)
+
+
+
+def test_disabled_groundedness_skips_external_judge(monkeypatch):
+    monkeypatch.setattr(rag.settings, "groundedness_enabled", False)
+    monkeypatch.setattr(
+        rag,
+        "_call_openai",
+        lambda *args: pytest.fail("Groundedness judge must not run when disabled"),
+    )
+
+    result = rag._evaluate_groundedness(
+        "O prazo é de 15 minutos.",
+        [{"evidence_id": "E1", "text": "O prazo é de 15 minutos."}],
+    )
+
+    assert result["groundedness"] == "not_evaluated"
+    assert result["groundedness_method"] == "disabled"
+    assert result["groundedness_claims"] == []
