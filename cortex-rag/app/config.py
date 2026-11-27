@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     api_rate_limit_requests_per_minute: int = Field(default=60, ge=1, le=100_000)
     embedding_model: str = "text-embedding-3-small"
     chat_model: str = "gpt-4o-mini"
+    groundedness_enabled: bool = True
     embedding_dimensions: int = 1536
     chunk_size: int = 1200
     chunk_overlap: int = 200
